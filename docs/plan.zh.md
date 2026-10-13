@@ -408,15 +408,21 @@ ctx.reflect.provide('artifactNavigation', { open: (f) => ctx.layout.selectPanel(
 
 ```
 移入回收站（macOS）：osascript -e 'tell application "Finder" to delete POSIX file "<abs>"'
-                   或 mv 到 ~/.Trash（跨平台回退：Linux 用 gio trash / Windows 用 PowerShell 回收站 API）
+                   跨平台回退：Linux 用 gio trash / Windows 用 PowerShell 回收站 API
 调 用 方 式：ctx.subprocess.spawn({ argv, cwd: workspaceRoot, stdio, graceMs, signal })
 ```
+
+**已在本机实测通过**【实测】：`osascript` 退出码 0、源文件消失、`~/.Trash` mtime 更新 → 移入回收站可用，无额外授权弹窗。
+
+⚠️ **同时实测到一个必须规避的坑**：macOS TCC 保护 `~/.Trash`，**Host 进程读不了它**（`fs.readdir` 抛 `Operation not permitted`；`ls` 只返回 `total 0`，**看起来像成功实为被静默过滤**）。所以：
+- 删除的成功判据只能是「**退出码 0 且源路径已不存在**」，**不要**去列回收站校验；
+- 插件内不做"从回收站恢复"，只提示用户自行取回（见下方第 4 条）。
 
 **安全设计**：
 1. **行为固定为回收站**，不提供硬删入口（减少误操作面）；
 2. 删除前展示完整路径、大小、所属对话、是否被多轮/多版本引用（多引用时提示"将一并移入回收站"）；
 3. 二次确认（参照官方 `RiskConfirmation` 交互自绘）；
-4. 删除后**索引标 `trashed`，记录保留**，提供"恢复"提示（回回收站取回后重新校检即可复原）；
+4. 删除后**索引标 `trashed`，记录保留**，提示"可从系统回收站取回；取回后重新校检即可复原索引状态"（**不由插件读回收站实现恢复**）；
 5. 沙箱模式（`workspace-write`）下工作区外路径可能被拒 → **必须有失败回执与提示，不能静默失败**。
 
 > 按 D2 调整后，本插件**不再有不可逆操作**，方案最大风险项消解。
@@ -605,7 +611,7 @@ dsh-artifact-center/
 5. 实测 `subprocess` 把一个临时文件移入回收站并验证可从 Finder 恢复；
 6. 监听 `turn/end` 事件，确认能触发一次快照 diff。
 
-**先在 web profile 完成 ①（`dsh web --profile web --port 0` 能 boot）**，六条全绿后再评估 desktop 安装。
+**先在 web profile 完成 ①（`dsh web --port 0 --no-open` 能 boot，且 warning 列表里没有 `artifact-center`）**，六条全绿后再评估 desktop 安装。
 
 **6 条都跑通 = 方案的地基全部验证完毕**，之后按 P1–P7 推进。
 

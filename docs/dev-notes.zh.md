@@ -8,54 +8,71 @@
 
 ## 1. 启动安全红线（最重要，先读这一节）
 
-### 1.1 事实
+### 1.1 事实（**源码 + 实测双重确认**）
 
-DSH 启动时，**所有 bundle 在同一棵 cordis 树里激活**。任何 entry 的 `apply()` 失败，`boot()` 会 **dispose 整棵树并 rethrow**，进程直接退出。
+DSH 启动时所有 bundle 在**同一棵 cordis 树**里激活。但失败是否致命，**取决于失败的是哪个 entry**：
 
-- 源码：`packages/boot/app-boot/src/index.ts`（catch 分支抛 `plugin tree failed to load`）
-- **没有隔离、没有跳过**。
-- 插件市场页面本身也在这棵树里 → 炸了以后**连 UI 都进不去卸载**。
+```js
+// packages/boot/app-boot/src/index.ts:746
+const requiredStartupEntryIds = new Set([
+  'agent-loop', 'webserver', 'modules', 'connection',
+  'headless-runner', 'acp', 'sdk-jsonrpc-server',
+])
+// :925-938  auditStartupEntries()
+//   required（= bootstrap Include 或上面 7 个 id 之一）里任何一个 inactive
+//     → throw StartupError → 启动失败，进程退出
+//   其余 entry inactive
+//     → 只是 warn("dsh: warning: N entries did not activate")，**启动继续**
+```
+
+**【实测】** 在本机 web profile 上跑 `dsh web --port 0 --no-open`：`dsh-mnemon` 等 **5 个 entry 激活失败**（`ctx.settings.register is not a function`），输出 `dsh: warning: 5 entries did not activate`，而服务**照常启动**并打印了 `dsh web: http://127.0.0.1:60731/?token=…`。
+
+**结论**：本插件的 entry id 是 `artifact-center`，**不在那 7 个必需 id 里** → 它自己失败**不会**让 DSH 起不来，只会多一行 warning。插件市场页面同样不在必需列表里，所以照样能进去卸载。
+
+> ⚠️ **仍然不要把这条当作"可以随便写"的许可**：真正致命的路径是**间接的**——如果插件在 `apply` 期间做了会波及必需 entry 的事（例如注册一个**重复的** `webServer` 路由使宿主注册链异常、或阻塞事件循环导致 `webserver` 超时未激活），就会升级成启动失败。安全写法照 §1.3 执行，成本很低。
 
 ### 1.2 对本项目的具体风险
 
-本项目跑在用户**正在使用的 DSH 客户端里**。当前会话的 `DSH_PROFILE=desktop`，即 **Electron 桌面应用**。如果本插件导致 boot 失败：
-
-> **用户打不开 DSH 桌面应用，也打不开插件市场去卸载它。**
-
-而且 desktop profile **由 Electron 独占管理**，CLI 命令 `dsh plugin --profile desktop ...` 会被拒绝：
+本项目跑在用户**正在使用的 DSH 客户端里**。当前会话的 `DSH_PROFILE=desktop`，即 **Electron 桌面应用**。desktop profile **由 Electron 独占管理**，CLI 命令 `dsh plugin --profile desktop ...` 会被拒绝：
 
 ```
 profile "desktop" is managed exclusively by the Electron application
 ```
 
-唯一的恢复办法是手改 `~/.dsh/profiles/desktop/package.json`，把包名从 **`dependencies`** 和 **`dsh.profile.bundles`** 两处同时删掉。**【实测】**
+如果（在极端情况下）桌面应用真的起不来，唯一的恢复办法是手改 `~/.dsh/profiles/desktop/package.json`，把包名从 **`dependencies`** 和 **`dsh.profile.bundles`** 两处同时删掉。**【源码确认】**
 
-### 1.3 硬性编码要求（每条都是为了不炸树）
+### 1.3 硬性编码要求（成本极低，照做即可）
 
 1. **模块顶层零副作用**：不 `throw`、不 `await`、不读文件、不联网、不 `process.exit`。只做纯声明。
-2. **只 `inject` 确定存在的服务**。本插件只硬依赖 `webServer`；其余（`sessionQuery`、`workspaceRegistry`、`fs`、`subprocess`）一律用 `ctx.get('name')` **探测后使用**。缺少某个服务时，插件应降级运行并把缺失信息暴露到状态接口，而不是让树倒下。
+2. **只 `inject` 确定存在的服务**。本插件只硬依赖 `webServer`；其余（`sessionQuery`、`workspaceRegistry`、`fs`、`subprocess`）一律用 `ctx.get('name')` **探测后使用**。缺少某个服务时，插件应降级运行并把缺失信息暴露到状态接口。
 3. **所有注册都放进 `ctx.effect()`**，靠返回的 disposer 随 fiber 释放。
 4. **可疑操作包 try/catch**：服务探测、业务初始化、第一次扫描——失败就降级成"状态接口里的 `error` 字段"，绝不向上抛。
-5. **提交前逐个 `node --check <file>`** 做语法检查。
-6. **先在 web profile 隔离验证**（见下），确认能 boot 再进 desktop。
-7. 首次在 desktop 安装时，**确保用户知道恢复命令**（改 `package.json` 两处）。
+5. **不要注册重复的 `webServer` 路由**：`register()` 对同一 `(kind, path)` 会 **throw**（契约如此），这会让你自己的 entry 失败——虽然只是 warning，但功能全丢。
+6. **提交前逐个 `node --check <file>`** 做语法检查。
+7. **先在 web profile 隔离验证**（见下），确认能 boot 再进 desktop。
 
-### 1.4 安全的验证顺序
+### 1.4 安全的验证顺序（命令已实测）
 
 ```bash
-# 1) 先在 web profile 试装（独立进程，炸了不影响用户桌面应用）
+# 1) 先在 web profile 试装（独立进程，不影响用户桌面应用）
 cd /Users/yqing/Documents/Project/dsh-plugin
 dsh plugin --profile web add .            # 也支持 add link:$PWD
 
 # 2) 启动一个临时实例，看是否 boot 成功（端口 0 = 随机端口，不抢 3080）
-dsh web --profile web --port 0 --no-open
+#    ⚠️ 注意：`dsh web` 本身就等于 `--profile web`，再加 --profile 会报
+#       "select a profile only once"（实测）。别写成 dsh web --profile web。
+dsh web --port 0 --no-open
 #     看到 dsh web: http://127.0.0.1:<port>/?token=... 即成功；Ctrl-C 收回
+#     同时留意 stderr 里的 "warning: N entries did not activate" —— 里面应**没有** artifact-center
 
-# 3) 确认插件行已挂上
+# 3) 确认插件行已挂上（dump-config 需要显式 --profile，因为子命令不是 profile 名）
 dsh --profile web --dump-config | grep -A3 artifact-center
 
-# 4) 出问题就摘掉（这一步不会 boot 插件树，是唯一还能用的出口）
+# 4) 出问题就摘掉
 dsh plugin --profile web remove dsh-artifact-center
+```
+
+> **本机 web profile 现状**【实测】：它现在有 **5 个 entry 起不来**（`dsh-mnemon` 在 0.1.7-rc.2 上报 `ctx.settings.register is not a function`，另有 modsearch 同样症状）。这是**既有环境问题，与本插件无关**，但验证时要在 warning 列表里区分清楚。
 ```
 
 > desktop profile **不要**用 CLI 试装。它的安装路径是 GUI 插件市场，或 agent 侧 `plugin_manager` 工具（`action: install_bundle`，`target` 传绝对目录）。
@@ -76,6 +93,17 @@ dsh plugin --profile web remove dsh-artifact-center
 | 兼容自检 | `node ~/.dsh/tools/check-plugin-compat.mjs` |
 
 **两代宿主并存是真实的**，peer 范围必须同时覆盖 0.1.x 与 0.2.x。
+
+**CLI 子命令与 profile 的关系**【源码 + 实测】：
+
+| 写法 | 含义 | 说明 |
+|---|---|---|
+| `dsh web [flags]` | = `dsh --profile web [flags]` | **`web` 这个子命令本身就是 profile 名** |
+| `dsh --profile web --dump-config` | 打印合成后的插件树 | 这里必须显式 `--profile`，因为子命令是 `--dump-config` 而不是 profile |
+| `dsh plugin --profile web add <pkg>` | 往 profile 装插件 | `plugin` 是子命令，profile 用 flag |
+| ❌ `dsh web --profile web` | **报错** `select a profile only once` | 实测踩过 |
+
+**web profile 当前状态**【实测】：`dsh web --port 0 --no-open` **能成功启动**（打印 `http://127.0.0.1:<port>/?token=…`），但伴随 `dsh: warning: 5 entries did not activate` —— `dsh-mnemon` 在 0.1.7-rc.2 上报 `ctx.settings.register is not a function`，modsearch 同症状。这是**既有环境问题**，与插件无关，但验证时要能在 warning 列表里把它和 `artifact-center` 区分开。
 
 ---
 
@@ -399,6 +427,25 @@ ctx.subprocess.spawn({
 
 **安全要求**：删除前展示完整路径/大小/所属对话/多版本引用；二次确认；删除后只把索引标 `trashed`，记录保留；失败必须有回执，**不能静默失败**。
 
+#### 6.4.1 已实测的回收站行为（**重要，直接影响验收方式**）
+
+在本机跑过一次完整探针（建临时文件 → `osascript` 移入回收站）：
+
+| 观察 | 结果 |
+|---|---|
+| `osascript` 退出码 | **0** |
+| 它的 stdout | `document file xxx.txt of item .Trash of folder yqing of folder Users of startup disk`（即 Finder 返回了回收站里的对象引用） |
+| 源文件 | **已消失** ✅ |
+| `~/.Trash` 目录 mtime | 更新到操作时刻 ✅ |
+| **从 Host 进程列举 `~/.Trash`** | **`PermissionError: Operation not permitted`** ❌ |
+
+结论：
+
+1. **`osascript` 移入回收站在本机可用**，不需要任何额外授权弹窗（P0 第 ⑤ 条已验证通过）。
+2. ⚠️ **不要试图在 Host 进程里校验回收站内容**：macOS TCC 保护 `~/.Trash`，`fs.readdir` / `ls` 一律被拒（`ls` 甚至只返回 `total 0`，**看起来像成功了，实际是被静默过滤**——很容易写出假阳性校验）。
+3. 因此删除的**成功判据只能是**：`osascript` 退出码为 0 **且** 源路径已不存在。**不要**依赖读取回收站。
+4. "恢复"功能不要在插件里做——只能提示用户「可从系统回收站取回；取回后重新校检即可恢复索引状态」（这也是方案里的既定做法）。
+
 > 注：插件代码在 Host 进程内以用户权限运行，**不经过 DSH 的审批体系**。所以"删除"必须由插件自己把关。
 
 ### 6.5 与本项目无关但容易误用的能力
@@ -488,11 +535,13 @@ description:
 
 | # | 现象 | 根因 | 对策 |
 |---|---|---|---|
-| T1 | 装完 `dsh web` 起不来，且市场页也进不去 | 插件 `apply` 抛错 → boot dispose 整棵树并 rethrow，**无隔离** | §1 的 7 条硬性要求；先 web profile 验证 |
+| T1 | 装完 `dsh web` 起不来 | **只有** 7 个必需 entry（`agent-loop`/`webserver`/`modules`/`connection`/`headless-runner`/`acp`/`sdk-jsonrpc-server`）或 bootstrap Include 失败才致命；普通插件失败**只是 warning**（`app-boot/src/index.ts:746,925-938`） | 本插件 id 不在必需列表 → 自身失败不致启动失败；但仍照 §1.3 写，避免波及必需 entry |
+| T1b | 插件静默不生效，只在 stderr 留一行 `N entries did not activate` | 同上：非必需 entry 失败被降级为 warning，容易被忽略 | 每次 `dsh web --port 0` 后都要**读 stderr 的 warning 列表**，确认里面没有 `artifact-center` |
 | T2 | 点侧栏图标报 `main panel "x" is not registered` | `main` 的 key 与 `sidebar.panellist` 的 id 不一致 | 用同一个常量；成对注册 |
 | T3 | 升级 DSH 后插件 UI 白屏 | `require('@deepseek-ai/dsh-client-ui-primitives')` 等 Harness Client 包变更 | **本项目禁止 import 任何 `dsh-client-ui-*`**，控件自绘 |
 | T4 | 全局面板读不到文件字节 | `workspaceFiles.*` 每个方法都要 `sessionId`；`dsh-resource://file/absolute/...` 无法授权 | 自建 `webServer` 字节路由 |
 | T5 | 想删文件但找不到 API | `ctx.fs` 契约里没有删除 | `ctx.subprocess.spawn()`；本项目一律移入回收站 |
+| T5b | 回收站校验永远失败，或假成功 | macOS TCC 保护 `~/.Trash`，Host 进程读不了（`ls` 只回 `total 0`，**像成功实为被过滤**） | 只用「退出码 0 + 源路径消失」判定；不读回收站、不做插件内恢复 |
 | T6 | 自己解 zstd 日志，格式一变就崩 | 日志是 `session.v4.jsonl.zstd`，格式随版本演进 | 一律走 `ctx.sessionQuery` |
 | T7 | 拿不到对话标题 | `SessionHeader` 没有 title 字段，标题是 `session/title` 事件 | `sessionQuery.readTitle*()` |
 | T8 | web 上装得上、desktop 装不上（或反之） | 两代宿主并存（0.1.7-rc.2 / 0.2.0-rc.2），peer 范围没覆盖 | `^0.1.5-rc.1 \|\| ^0.2.0-rc.1` |
@@ -523,7 +572,7 @@ description:
    - `platform=host, provider=Event, method=listEvents` → 事件名与静态/瀑布模式
    > **写代码前先用它确认签名**，比读源码快，而且反映的是"运行中的这一版"。
 2. `node --check <file>` —— 每个 JS 文件提交前必过。
-3. `dsh web --profile web --port 0 --no-open` —— 唯一能确认"插件树是否成功启动"的手段。
+3. `dsh web --port 0 --no-open` —— 唯一能确认"插件树是否成功启动"的手段（注意：`dsh web` 已隐含 `--profile web`，不要再加 `--profile`）。
 4. `dsh --profile web --dump-config` —— 看合成后的插件树。
 5. 浏览器验证 —— 若有可控浏览器（如 MCP browser 工具），打开 `DSH_WEB_URL` 截图确认左栏图标与面板；否则如实说明"未做视觉验证"。
 6. 读安装包的 `lib/index.js` + `README.md` —— 生态实现比文档更可信。

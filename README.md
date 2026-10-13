@@ -90,7 +90,7 @@ dsh-artifact-center/
 ## Development
 
 > ⚠️ **Read [`docs/dev-notes.zh.md`](docs/dev-notes.zh.md) first — the section on startup safety.**
-> In DSH, **all bundles activate in one cordis tree**. If any plugin's `apply()` throws, boot disposes the whole tree and rethrows, so **DSH will not start at all** — including the plugin market page you would need to uninstall it.
+> In DSH, all bundles activate in **one cordis tree**. Most entries may fail without stopping startup (they produce `warning: N entries did not activate`), but a failure in one of the **seven required entries** — `agent-loop`, `webserver`, `modules`, `connection`, `headless-runner`, `acp`, `sdk-jsonrpc-server` — or in the bootstrap Include is **fatal** and DSH will not start at all. Write defensively (see dev-notes §1.3) and always check the warning list after booting.
 
 **Always verify in an isolated profile first:**
 
@@ -99,7 +99,10 @@ dsh-artifact-center/
 dsh plugin --profile web add .
 
 # boot a temporary instance to prove the plugin tree loads
-dsh web --profile web --port 0 --no-open
+# (note: `dsh web` already means `--profile web`; passing --profile again errors)
+dsh web --port 0 --no-open
+# success prints:  dsh web: http://127.0.0.1:<port>/?token=...
+# also read the warnings: the list must NOT contain artifact-center
 
 # uninstall if it breaks
 dsh plugin --profile web remove dsh-artifact-center

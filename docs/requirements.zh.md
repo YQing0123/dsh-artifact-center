@@ -374,7 +374,7 @@ interface TagRecord { name: string; color?: string; auto?: { kind: 'glob'|'ext'|
 
 编码时应**优先验证**这些——它们就是 **P0 的六条链路**（与 [`plan.zh.md`](plan.zh.md) §10.2 一致）：
 
-1. ⚠️ **最小插件骨架能 boot**：web profile 下安装 + `dsh web --profile web --port 0` 成功启动（纯 JS、零构建）。
+1. ⚠️ **最小插件骨架能 boot**：web profile 下安装 + `dsh web --port 0 --no-open` 成功启动（纯 JS、零构建），且 stderr 的 `warning: N entries did not activate` 列表里**没有** `artifact-center`。
 2. ⚠️ **左栏入口 + 主面板跑通**：`sidebar.panellist` 图标可见，点击进入 `main` 面板（且无活动会话时也可用）。
 3. ⚠️ **会话与对话名可取**：`sessionQuery.listSessions()` / `readTitleSnapshots()` 在插件内可调用（服务已挂载）。
 4. ⚠️ **自建字节路由可用**：`/artifact-center/file` 能返回图片与 PDF 字节，且信任围栏生效（跨站请求被拒）。
