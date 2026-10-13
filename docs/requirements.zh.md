@@ -372,11 +372,15 @@ interface TagRecord { name: string; color?: string; auto?: { kind: 'glob'|'ext'|
 
 ## 9. 未决 / 需实测确认的点
 
-编码时应**优先验证**这些（列在 P0）：
+编码时应**优先验证**这些——它们就是 **P0 的六条链路**（与 [`plan.zh.md`](plan.zh.md) §10.2 一致）：
 
-1. ⚠️ web profile 下安装 + `dsh web --port 0` 能成功 boot。
-2. ⚠️ 自建 `/artifact-center/file` 路由能返回图片与 PDF 字节，且信任围栏生效。
-3. ⚠️ `subprocess` + `osascript` 移入回收站在本机可用，并能从 Finder 恢复。
-4. ⚠️ `sessionQuery.listSessions()` / `readTitleSnapshots()` 在插件内可调用（服务已挂载）。
-5. ⚠️ `turn/end` 事件能被插件监听到，并在其上触发快照 diff。
-6. ⚠️ 在 desktop profile 安装后，DSH 桌面应用仍能正常启动（**这是最高风险步骤，务必先备份 `~/.dsh/profiles/desktop/package.json`**）。
+1. ⚠️ **最小插件骨架能 boot**：web profile 下安装 + `dsh web --profile web --port 0` 成功启动（纯 JS、零构建）。
+2. ⚠️ **左栏入口 + 主面板跑通**：`sidebar.panellist` 图标可见，点击进入 `main` 面板（且无活动会话时也可用）。
+3. ⚠️ **会话与对话名可取**：`sessionQuery.listSessions()` / `readTitleSnapshots()` 在插件内可调用（服务已挂载）。
+4. ⚠️ **自建字节路由可用**：`/artifact-center/file` 能返回图片与 PDF 字节，且信任围栏生效（跨站请求被拒）。
+5. ⚠️ **回收站可用**：`subprocess` + `osascript` 移入回收站在本机可用，并能从 Finder 恢复。
+6. ⚠️ **`turn/end` 可监听**：插件能收到该事件并触发一次快照 diff。
+
+**P0 六条全绿之后**才做这一步（最高风险）：
+
+7. ⚠️ 在 **desktop profile** 安装后，DSH 桌面应用仍能正常启动 —— 操作前**务必备份 `~/.dsh/profiles/desktop/package.json`**，并确认自己知道如何从 `dependencies` 与 `dsh.profile.bundles` 两处手工摘除该包。

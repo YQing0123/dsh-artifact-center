@@ -87,13 +87,15 @@ dsh plugin --profile web remove dsh-artifact-center
 dsh-artifact-center/
 ├── package.json              # ★ 必须声明 dsh.bundle
 ├── cordis.patch.yml          # 加载器补丁：插入插件行
-├── index.js                  # Host 半边入口（Node ESM）
-├── client.js                 # 浏览器半边（必须是单文件、自包含）
-├── lib/                      # 发布产物（Host 编译结果 / vendor 依赖）
+├── index.js                  # Host 半边入口（Node ESM，纯 JS，无需构建）
+├── client.js                 # 浏览器半边（必须单文件、自包含）
+├── vendor/                   # 可选（§7.2 路线 B）：mermaid / markdown-it / DOMPurify 的 UMD dist
 ├── locale/{en,zh}.json       # 插件卡片标题与描述
-├── README.md / README.zh-CN.md / LICENSE
+├── README.md / README.zh-CN.md / LICENSE / THIRD_PARTY_NOTICES.md
 └── docs/
 ```
+
+> **没有 `src/` / `tsconfig.json` / `lib/` 是有意的**：第一版采用官方模板同款的**纯 JS、零构建**形态，`node --check` 即可验证，完全不碰打包器（理由见 §7）。只有确认必须走 §7.2 路线 C 时才引入 TypeScript 与 `lib/` 输出。
 
 ### 3.2 `package.json`（可直接照抄后按需调整）
 
@@ -103,25 +105,23 @@ dsh-artifact-center/
   "version": "0.1.0",
   "description": "产物中心 · Artifact Center — index, browse, preview and open every artifact your DSH sessions produced, across all workspaces, by conversation.",
   "type": "module",
-  "main": "lib/index.js",
-  "types": "lib/types/index.d.ts",
+  "main": "index.js",
   "exports": {
-    ".":               { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./client":        { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
+    ".":               "./index.js",
+    "./client":        "./client.js",
     "./locale/*.json": "./locale/*.json",
     "./package.json":  "./package.json"
   },
   "files": [
-    "lib/index.js", "lib/client.js", "lib/vendor/**",
-    "lib/types/**/*.d.ts", "locale/*.json",
-    "cordis.patch.yml", "README.md", "README.zh-CN.md", "LICENSE"
+    "index.js", "client.js", "vendor/**", "locale/*.json",
+    "cordis.patch.yml", "README.md", "README.zh-CN.md", "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/YQing0123/dsh-artifact-center.git"
   },
   "publishConfig": { "access": "public" },
-  "scripts": { "build": "tsc && tsdown", "prepare": "npm run build" },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },   // ★ 上架硬门槛
     "client": {
@@ -425,7 +425,7 @@ ctx.subprocess.spawn({
 
 需要 markdown 渲染与 mermaid（它们体积大）时，**不要**急着上打包器：
 
-1. 把 vendor 的 UMD dist（`markdown-it.min.js`、`mermaid.min.js`、`purify.min.js`）放进 `lib/vendor/`；
+1. 把 vendor 的 UMD dist（`markdown-it.min.js`、`mermaid.min.js`、`purify.min.js`）放进 `vendor/`；
 2. 用自建 Host 路由按白名单文件名提供这些文件（`/artifact-center/bundle/<name>.js`），带 `cache-control: no-cache` + ETag + `If-None-Match`；
 3. 客户端首次用到某能力时，动态注入 `<script>` 加载它（UMD 会挂到 `window`）。
 

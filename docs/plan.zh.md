@@ -1,5 +1,5 @@
 # 产物中心 · Artifact Center
-### DSH 插件方案 v1.1 · 决策已冻结，等待编码
+### DSH 插件方案 v1.2 · 决策已冻结，等待编码
 
 | | |
 |---|---|
@@ -23,6 +23,7 @@
 
 | 版本 | 变更 |
 |---|---|
+| v1.2 | **交接一致性校验**：① 统一 HTTP 路由前缀为 `/artifact-center/*`（原先 plan 用 `/artifacts/*`，与 dev-notes/requirements 不一致）；② 包形态改为**纯 JS、零构建**（根目录 `index.js` + `client.js`，去掉 `src/`、`tsconfig.json`、`tsdown.config.ts`、`lib/`），与 dev-notes §7.2 路线 A 对齐；③ 统一 P0 为**六条链路**并同步 requirements §9；④ 回填真实仓库地址与 awesome-dsh-plugin 条目路径 |
 | v1.1 | 仓库创建（`YQing0123/dsh-artifact-center`）；拆分出需求规格与开发注意事项两份文档；统一文档名为 ASCII |
 | **v1.0** | **决策全部锁定 + 插件命名**：Markdown/Mermaid 渲染保留；索引口径＝仅"对话产出"；回填全部 289 份历史会话；增加 `artifact_search` Agent 工具；`dsh-better-sidebar` 作可选预览增强；**定名 `dsh-artifact-center`（产物中心）** |
 | v0.3 | 按用户决策调整：**① 取消一切格式转换（不做 Office→PDF）**，原生什么格式就展示什么格式，其余交给"打开方式"；**② 删除一律进回收站**，不提供硬删；**③ 遵守官方禁令**，不 import 任何 Harness Client 包；**④ 明确上架路径为 `dsh-plugin` topic 生态** |
@@ -63,7 +64,7 @@
 - ❌ `dsh-file-explorer` 一类命名会与已有 5+ 个"工作区文件浏览器"混为一谈，丢失"跨工作区 · 按对话归档"的差异化。
 - ✅ `dsh-artifact-center` 在市场搜索 "artifact" 时可命中，且与中文名"产物中心"一一对应。
 
-> **待你提供**：GitHub 仓库地址（含 owner）。拿到后我会回填 `repository` 字段、awesome-dsh-plugin 的 `<owner>__dsh-artifact-center.yml` 条目，并开始 P0。
+> **仓库已建**：`https://github.com/YQing0123/dsh-artifact-center`。awesome-dsh-plugin 的条目路径为 `data/plugins/YQing0123__dsh-artifact-center.yml`（尚未提交 PR；仓库需先加 `dsh-plugin` topic 并满 1 天）。
 
 ---
 
@@ -290,7 +291,7 @@
 │   ├─ 校检器 Reconciler ── stat 校验 missing / size / mtime                  │
 │   └─ 存储 Store        ── ctx.storageDomain（zod，per-record 布局）         │
 │  Remote API：list / search / tags / star / trash / reveal / open            │
-│  ★ Web 路由（必须）：/artifacts/api、/artifacts/file（字节流，支持 Range）   │
+│  ★ Web 路由（必须）：/artifact-center/api、/artifact-center/file（字节流） │
 │  （可选）工具：artifact_search → 让 Agent 也能检索历史产物                   │
 └──────────────────────────────────────────────────────────────────────────┘
                               ▲ Remote / fetch
@@ -442,14 +443,14 @@ artifact_search(query, workspace?, type?, tag?, since?, limit?)
 
 | 阶段 | 内容 | 验收标准 |
 |---|---|---|
-| **P0 技术验证（½ 天）** | ① 迷你插件注册 `sidebar.panellist` + `main` 跑通；② Host 调 `sessionQuery.listSessions()` 拿到会话与标题；③ 自建 `/artifacts/file` 路由返回一张真实图片与一个 PDF 的字节；④ 实测 `subprocess` 把临时文件移入回收站 | 每条链路在本机有"看到了"的证据。~~Office→PDF~~ 已按 D1 移除 |
+| **P0 技术验证（½ 天）** | ① web profile 安装 + `dsh web --port 0` boot 成功；② 左栏 `sidebar.panellist` + `main` 面板跑通（`client.js` **手写自包含，不引入打包器**）；③ `sessionQuery.listSessions()` / `readTitleSnapshots()` 取会话与对话名；④ 自建 `/artifact-center/file` 路由返回真实图片与 PDF 字节，信任围栏生效；⑤ `subprocess` 把临时文件移入回收站并能从 Finder 恢复；⑥ 监听 `turn/end` 成功触发快照 diff | 每条链路在本机有"看到了"的证据；P0 全绿后才评估 desktop 安装（见 `dev-notes.zh.md` §1）。~~Office→PDF~~ 已按 D1 移除 |
 | **P1 索引引擎（1–2 天）** | storageDomain 落库 + L1 回填 + L2 + **L3 快照器** + 忽略规则 + 爆量折叠 | 回填 289 份日志后能查到指定文件并显示正确对话名；快照能抓到 bash 产物 |
 | **P2 面板与列表（2–3 天）** | 主面板 + 分类树 + 虚拟滚动列表 + 分类/筛选/搜索 | 从左栏进入，能按工作区/类型筛出目标文件 |
 | **P3 预览与打开（1–2 天）** | 自带渲染器（图片/PDF/文本/代码/md/mermaid/html/音视频）+ 打开方式菜单 | 原生格式面板内可看；Office 等格式"用其他应用打开"生效 |
 | **P4 标签/收藏/版本/失效（2 天）** | 标签 CRUD + 自动规则 + 版本聚合 + missing 校检 + 清单导出 | 打标签后能按标签筛；删源文件后条目变 missing |
 | **P5 删除与恢复（½ 天）** | 回收站移动 + 二次确认 + `trashed` 标记与恢复 | 移入回收站后可从 Finder 恢复，索引同步更新 |
 | **P6 Agent 工具 + i18n + 文档（1 天）** | `artifact_search` + 双语 + README 中英 | Agent 能按自然语言找到历史产物 |
-| **P7 打包上架（1–2 天）** | `tsc && tsdown`（**自建客户端打包配置**）+ 加 `dsh-plugin` topic + 目录 PR | 干净 profile 里装上即可用；市场能搜到 |
+| **P7 打包上架（1–2 天）** | 打包（按 `dev-notes.zh.md` §7.2：路线 A/B 无需打包器；仅路线 C 才自建 tsdown）+ 加 `dsh-plugin` topic + 目录 PR | 干净 profile 里装上即可用；市场能搜到 |
 
 **总计约 9–13 个工作日**（比 v0.2 少 2 天，主要来自 D1 砍掉 Office 转换）。
 
@@ -463,14 +464,14 @@ artifact_search(query, workspace?, type?, tag?, since?, limit?)
 1. npm 发布（可选但强烈建议）+ GitHub Release 挂 tarball（可选）
 2. 仓库加 dsh-plugin topic  ← 官方唯一指引，也是 D4 指定的入口
    https://github.com/topics/dsh-plugin
-3. 向 awesome-dsh-plugin 提 PR，加 data/plugins/<owner>__<repo>.yml
+3. 向 awesome-dsh-plugin 提 PR，加 data/plugins/YQing0123__dsh-artifact-center.yml
 4. README 给出安装命令（兜底，白名单审核期间也能装）
 ```
 
 ```yaml
-# data/plugins/<you>__dsh-artifact-center.yml
-url: https://github.com/<you>/dsh-artifact-center
-name: <you>/dsh-artifact-center
+# data/plugins/YQing0123__dsh-artifact-center.yml
+url: https://github.com/YQing0123/dsh-artifact-center
+name: YQing0123/dsh-artifact-center
 category: ui          # 以浏览/预览 UI 为主 → ui
 description:
   en: 'Artifact center: browse, preview and open every artifact a session produced.'
@@ -488,53 +489,54 @@ description:
 
 ```
 dsh-artifact-center/
-├── package.json          # dsh.bundle 必填；带 UI 再加 dsh.client
-├── cordis.patch.yml
-├── tsconfig.json
-├── tsdown.config.ts      # ★ 外部包必须自建客户端打包配置
-├── src/{index.ts, client/**}
-├── locale/{en,zh}.json
-├── README.md / README.zh-CN.md / LICENSE
-├── screenshots.json      # 可选，市场截图
-└── lib/{index.js, client.js, types/**/*.d.ts}   # 构建产物随包发布
+├── package.json            # dsh.bundle 必填；带 UI 再加 dsh.client
+├── cordis.patch.yml        # 加载器补丁：插入插件行
+├── index.js                # Host 半边（Node ESM，纯 JS，无需构建）
+├── client.js               # 浏览器半边（自包含单文件，无需构建）
+├── vendor/                 # 可选（路线 B）：mermaid / markdown-it / DOMPurify 的 UMD dist
+├── locale/{en,zh}.json     # 插件卡片标题与描述
+├── README.md / README.zh-CN.md / LICENSE / THIRD_PARTY_NOTICES.md
+└── docs/
 ```
+
+> **为什么没有 `src/`、`tsconfig.json`、`tsdown.config.ts`、`lib/`**：P0 采用官方模板同款的**纯 JS、零构建**形态（`dev-notes.zh.md` §7.2 路线 A）。这样完全不碰打包器，`node --check` 即可验证。等 P7 需要 mermaid/markdown 这类大依赖时，优先用**路线 B（自带 chunk 路由）**；只有两条路都撑不住才引入 TypeScript + 自建打包（路线 C），届时把 `exports` 改指向 `lib/`。
 
 ```jsonc
 {
   "name": "dsh-artifact-center",         // 已查：npm 未被占用
   "version": "0.1.0",
   "type": "module",
-  "main": "lib/index.js",
-  "types": "lib/types/index.d.ts",
-  "repository": { "type": "git", "url": "git+https://github.com/<you>/dsh-artifact-center.git" },
-  "publishConfig": { "access": "public" },
+  "main": "index.js",
   "exports": {
-    ".":               { "types": "./lib/types/index.d.ts", "default": "./lib/index.js" },
-    "./client":        { "types": "./lib/types/client/index.d.ts", "default": "./lib/client.js" },
+    ".":               "./index.js",
+    "./client":        "./client.js",
     "./locale/*.json": "./locale/*.json",
     "./package.json":  "./package.json"
   },
-  "files": ["lib/index.js", "lib/client.js", "lib/types/**/*.d.ts",
-            "locale/*.json", "cordis.patch.yml", "README.md", "README.zh-CN.md", "LICENSE"],
+  "files": ["index.js", "client.js", "vendor/**", "locale/*.json",
+            "cordis.patch.yml", "README.md", "README.zh-CN.md", "LICENSE",
+            "THIRD_PARTY_NOTICES.md"],
+  "repository": { "type": "git", "url": "git+https://github.com/YQing0123/dsh-artifact-center.git" },
+  "publishConfig": { "access": "public" },
   "dsh": {
     "bundle": { "patch": "./cordis.patch.yml" },      // ★ 收录硬门槛
     "client": { "platform": "web",
       "inject": ["@deepseek-ai/dsh-client-locale"] }
   },
-  "scripts": { "build": "tsc && tsdown", "prepare": "npm run build" },
   "peerDependencies": {
     "@deepseek-ai/cordis": ">=4.0.0 <5",
-    "@deepseek-ai/dsh-client-ui-sidebar": "^0.1.5-rc.1 || ^0.2.0-rc.1"
+    "@deepseek-ai/dsh-client-ui-sidebar": "^0.1.5-rc.1 || ^0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-layout":  "^0.1.5-rc.1 || ^0.2.0-rc.1"
   },
   "keywords": ["dsh", "dsh-plugin", "deepseek-harness", "artifact", "deliverables", "file-index"]
 }
 ```
 
 **构建要点**【源码确认】：
-- Host 半边：`tsc` → `lib/`；
-- 浏览器半边必须是 lazy-CJS factory：`window.__ModuleLoader__.load({ id: "<包名>", factory: (require) => {…} })`；
-- ⚠️ **`clientBundle` 打包预设没有发布到 npm**，只存在于 DSH 仓库内（`packages/client/tsdown.client.ts`）。官方 cookbook 原话："a package outside this repository reproduces that build itself" —— **外部作者必须自己复刻等价配置**（可从 `dsh-image-gen` / `dsh-better-sidebar` 的 `lib/client.js` 首行反推）；
-- 源码安装（`github:`）只跑 `prepare`，pnpm ≥10 需用户在 profile 的 `pnpm-workspace.yaml` 写 `allowBuilds`。
+- **P0–P6 不需要任何构建**：Host 半边与浏览器半边都是纯 JS，改了直接生效（重装或重启）。
+- 浏览器半边必须是 lazy-CJS factory：`window.__ModuleLoader__.load({ id: "<包名>", factory: (require) => {…} })`，且 `id` **必须等于包名**。
+- ⚠️ **`clientBundle` 打包预设没有发布到 npm**，只存在于 DSH 仓库内（`packages/client/tsdown.client.ts`）。官方 cookbook 原话："a package outside this repository reproduces that build itself" —— 这是**尽量避免路线 C** 的核心理由。
+- 若将来走 `github:` 源码安装：只跑 `prepare` 脚本，且 pnpm ≥10 会先拦截构建，用户需在 profile 的 `pnpm-workspace.yaml` 写 `allowBuilds: { dsh-artifact-center: true }`。
 
 ### 8.4 版本兼容（最容易踩的坑）
 
@@ -592,17 +594,20 @@ dsh-artifact-center/
 | 初始化 | 可先只建空仓库（我会写 README / LICENSE / package.json） |
 | License | MIT（建议） |
 
-> 建好后把仓库地址（`https://github.com/<owner>/dsh-artifact-center`）发我，我会回填 `repository` 字段、生成 awesome-dsh-plugin 的 `data/plugins/<owner>__dsh-artifact-center.yml` 条目，并开始 P0。
+> **仓库已建**：`https://github.com/YQing0123/dsh-artifact-center`（当前为空仓库、无 topic）。`repository` 字段已回填到 §8.3；awesome-dsh-plugin 条目为 `data/plugins/YQing0123__dsh-artifact-center.yml`，待 P7 提交。
 
-### 10.2 拿到仓库后我立刻做的事（P0，约半天）
+### 10.2 P0 要验证的六条链路（约半天）
 
-1. 搭出最小插件骨架：`package.json` + `cordis.patch.yml` + `index.js` + 自建 `tsdown` 客户端打包配置；
+1. 搭出最小插件骨架：`package.json` + `cordis.patch.yml` + `index.js` + `client.js`（**纯 JS、零构建、零打包器**）；
 2. 注册 `sidebar.panellist` 入口 + `main` 主面板，跑通"左栏点图标 → 打开产物中心"；
-3. Host 侧调 `ctx.sessionQuery.listSessions()` / `readTitleSnapshots()`，打印真实会话与对话名；
-4. 自建 `/artifacts/file` 路由，返回一张真实图片与一个真实 PDF 的字节；
-5. 实测 `subprocess` 把一个临时文件移入回收站并验证可从 Finder 恢复。
+3. Host 侧调 `ctx.sessionQuery.listSessions()` / `readTitleSnapshots()`，拿到真实会话与对话名；
+4. 自建 `/artifact-center/file` 路由，返回一张真实图片与一个真实 PDF 的字节，且信任围栏生效；
+5. 实测 `subprocess` 把一个临时文件移入回收站并验证可从 Finder 恢复；
+6. 监听 `turn/end` 事件，确认能触发一次快照 diff。
 
-**5 条都跑通 = 方案的地基全部验证完毕**，之后按 P1–P7 推进。
+**先在 web profile 完成 ①（`dsh web --profile web --port 0` 能 boot）**，六条全绿后再评估 desktop 安装。
+
+**6 条都跑通 = 方案的地基全部验证完毕**，之后按 P1–P7 推进。
 
 ---
 

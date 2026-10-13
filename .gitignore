@@ -1,11 +1,12 @@
 # dependencies
 node_modules/
 
-# build output (lib/* keeps the directory traversable so lib/vendor can be committed)
-lib/*
-!lib/vendor/
+# build output — the first version is plain JS with no build step, so nothing
+# here yet; kept for a future TypeScript/route-C setup.
+lib/
 dist/
 *.tsbuildinfo
+!vendor/
 
 # logs & OS noise
 *.log
