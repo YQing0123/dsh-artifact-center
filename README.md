@@ -9,7 +9,7 @@ Find the file a DSH conversation produced, together with its workspace and conve
 - A global sidebar panel that works without an active conversation.
 - Historical backfill from complete session events, including file writes, edits and explicitly presented deliverables.
 - Live workspace snapshots at turn end to detect shell and subprocess outputs. Large output bursts are summarized rather than flooding the list.
-- Workspace/type/tag/date filters, favorites, notes, bounded text-content search and a virtualized list.
+- Workspace/tag/date filters, favorites, notes, bounded text-content search and a virtualized list. Check or uncheck extensions directly under “Readable formats” to control visibility; the choice is saved in this browser.
 - Native image, PDF, Markdown, Mermaid, text/code, CSV/TSV, sandboxed HTML and media previews. Office files and binaries use the system's applications; no format conversion takes place.
 - Conversation links, path/link copying, file-handler selection, provenance history and CSV/Markdown export.
 - Missing-file checks and confirmed moves to the system trash. Retrieve a file using your file manager, then check files to restore its index status.

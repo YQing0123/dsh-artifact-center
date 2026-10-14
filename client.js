@@ -112,7 +112,7 @@ window.__ModuleLoader__.load({
       searchHint: "Text search reads a bounded prefix of text files.",
       countLimit: "Results are capped at the configured index limit.",
       readableFormats: "Readable formats",
-      readableHint: "Choose supported extensions in cordis.patch.yml.",
+      readableHint: "Check a format to show it; uncheck to hide it. Your selection is saved in this browser.",
       visibleFormats: "Show file types",
       moreActions: "More file actions",
       fileInfo: "File information",
@@ -241,7 +241,7 @@ window.__ModuleLoader__.load({
       searchHint: "内容检索只读取文本文件的有限长度。",
       countLimit: "结果数量受配置的索引上限限制。",
       readableFormats: "可读取格式",
-      readableHint: "可在 cordis.patch.yml 中从支持的扩展名里选择。",
+      readableHint: "勾选即展示，取消即隐藏；选择会自动保存在当前浏览器。",
       visibleFormats: "展示文件类型",
       moreActions: "更多文件操作",
       fileInfo: "文件信息",
@@ -318,6 +318,11 @@ window.__ModuleLoader__.load({
 @media(max-width:1100px){.ac-nav{width:190px}.ac-previewhead{padding:10px 12px;gap:8px}.ac-preview-filetype{display:none}}
 @media(max-width:760px){.ac-nav{width:154px}.ac-preview{position:absolute;inset:0;width:100%;min-width:0;z-index:4}.ac-previewhead{flex-wrap:wrap}.ac-preview-title{min-width:120px}.ac-preview-tools{margin-left:auto}.ac-previewbody{padding:12px}.ac-rendered-document{padding:20px}.ac-previewmeta{position:absolute;right:0;top:0;bottom:0;z-index:2;width:min(280px,90%);box-shadow:-8px 0 24px #0001}}
 @media(prefers-reduced-motion:reduce){.ac-type-group>summary:before{transition:none}}
+.ac-format-list{gap:6px;padding:6px 8px}
+.ac-format-option{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;cursor:pointer;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary)}
+.ac-format-option[data-selected=true]{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 30%,var(--dsw-alias-border-l1));background:color-mix(in srgb,var(--dsw-alias-brand-primary) 7%,var(--dsw-alias-bg-layer-1));color:var(--dsw-alias-label-primary)}
+.ac-format-option input{width:12px;height:12px;margin:0;accent-color:var(--dsw-alias-brand-primary)}.ac-format-option code{font-size:11px;border:0;padding:0;background:none;color:inherit}
+
 `;
     function Icon({ kind = "folder", size = 18 }) {
       const paths = {
@@ -728,49 +733,25 @@ window.__ModuleLoader__.load({
       useEffect(() => { if (ref.current) ref.current.indeterminate = !!mixed; }, [mixed]);
       return h("input", { ...props, type: "checkbox", ref, "aria-checked": mixed ? "mixed" : props.checked });
     }
-    function FormatFilters({ catalog, records, value, onChange, t }) {
-      const counts = useMemo(() => {
-        const result = new Map();
-        for (const r of records) result.set(formatKey(r), (result.get(formatKey(r)) ?? 0) + 1);
-        return result;
-      }, [records]);
-      const checked = (key) => value === null || value.includes(key);
-      const selectedCount = catalog.filter(f => checked(f.key)).length;
-      const toggleFormats = (keys, enabled) => {
-        const next = new Set(value ?? catalog.map(f => f.key));
-        for (const key of keys) enabled ? next.add(key) : next.delete(key);
-        onChange(catalog.every(f => next.has(f.key)) ? null : [...next]);
+    function FormatFilters({ extensions, value, onChange, t }) {
+      const keys = [...new Set(extensions.map(ext => `.${String(ext).replace(/^\./, "").toLowerCase()}`))];
+      const checked = key => value === null || value.includes(key);
+      const toggle = (key, enabled) => {
+        const next = new Set(value ?? keys);
+        enabled ? next.add(key) : next.delete(key);
+        onChange(keys.every(k => next.has(k)) ? null : [...next]);
       };
-      const label = (key) => key === "$batch" ? t("batch") : key === "$none" ? t("noExtension") : key;
-      return h("details", { open: true, className: "ac-format-filter" },
-        h("summary", null, t("visibleFormats")),
-        h("p", { className: "ac-filter-hint" }, t("formatHint")),
-        h("div", { className: "ac-format-master" },
-          h("label", { className: "ac-type-option" },
-            h(MixedCheckbox, { checked: value === null || (catalog.length > 0 && selectedCount === catalog.length),
-              mixed: selectedCount > 0 && selectedCount < catalog.length, disabled: !catalog.length,
-              onChange: e => onChange(e.target.checked ? null : []) }),
-            h("span", null, t("allFormats")),
-            h("span", { className: "ac-count" }, `${selectedCount}/${catalog.length}`)),
-          h("div", { className: "ac-filter-actions" },
-            h("button", { onClick: () => onChange(null) }, t("selectAll")),
-            h("button", { onClick: () => onChange([]) }, t("selectNone")))),
-        ...FILE_KINDS.map(kind => {
-          const formats = catalog.filter(f => f.kind === kind).sort((a, b) => a.key.localeCompare(b.key));
-          if (!formats.length) return null;
-          const selected = formats.filter(f => checked(f.key)).length;
-          return h("details", { key: kind, className: "ac-type-group", open: kind === "doc" },
-            h("summary", null,
-              h(MixedCheckbox, { checked: selected === formats.length, mixed: selected > 0 && selected < formats.length,
-                "aria-label": `${t("showType")} ${t(kind)}`, onClick: e => e.stopPropagation(),
-                onChange: e => toggleFormats(formats.map(f => f.key), e.target.checked) }),
-              h("span", null, t(kind)),
-              h("span", { className: "ac-count" }, formats.reduce((sum, f) => sum + (counts.get(f.key) ?? 0), 0))),
-            ...formats.map(f => h("label", { key: f.key, className: "ac-type-option ac-extension-option" },
-              h("input", { type: "checkbox", checked: checked(f.key),
-                onChange: e => toggleFormats([f.key], e.target.checked), "aria-label": `${t("showType")} ${label(f.key)}` }),
-              h("span", null, label(f.key)), h("span", { className: "ac-count" }, counts.get(f.key) ?? 0))));
-        }));
+      return h("div", { className: "ac-format-filter" },
+        h("div", { className: "ac-format-list" }, ...keys.map(key => h("label", {
+          key, className: "ac-format-option", "data-selected": checked(key),
+        }, h("input", {
+          type: "checkbox", checked: checked(key), "aria-label": `${t("showType")} ${key}`,
+          onChange: event => toggle(key, event.target.checked),
+        }), h("code", null, key)))),
+        h("div", { className: "ac-filter-actions" },
+          h("button", { disabled: !keys.length, onClick: () => onChange(null) }, t("selectAll")),
+          h("button", { disabled: !keys.length, onClick: () => onChange([]) }, t("selectNone"))),
+        h("p", { className: "ac-filter-hint" }, t("readableHint")));
     }
     function TagEditor({ record, suggestions, t, onCancel, onSave }) {
       const dialog = useRef(), input = useRef();
@@ -883,7 +864,6 @@ window.__ModuleLoader__.load({
           }),
           [allRows, setAllRows] = useState([]),
           [serverTotal, setServerTotal] = useState(0),
-          [formatCatalog, setFormatCatalog] = useState([]),
           [visibleFormats, setVisibleFormats] = useState(readVisibleFormats),
           [tagTarget, setTagTarget] = useState(null),
           [query, setQuery] = useState(""),
@@ -907,11 +887,13 @@ window.__ModuleLoader__.load({
         const listRef = useRef(),
           lastCount = useRef(-1);
         const rows = useMemo(() => {
-          if (visibleFormats === null) return allRows;
-          const allowed = new Set(visibleFormats);
-          return allRows.filter(r => allowed.has(formatKey(r)));
-        }, [allRows, visibleFormats]);
-        const total = visibleFormats === null ? serverTotal : rows.length;
+          const configured = status.config?.readableExtensions;
+          if (!configured) return allRows;
+          const available = new Set(configured.map(ext => `.${String(ext).replace(/^\./, "").toLowerCase()}`));
+          const allowed = visibleFormats === null ? available : new Set(visibleFormats.filter(key => available.has(key)));
+          return allRows.filter(r => r.burst ? visibleFormats === null : allowed.has(formatKey(r)));
+        }, [allRows, visibleFormats, status.config?.readableExtensions]);
+        const total = rows.length;
         useEffect(() => {
           try { localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(visibleFormats)); } catch { /* Current-tab filtering still works without browser storage. */ }
         }, [visibleFormats]);
@@ -954,14 +936,6 @@ window.__ModuleLoader__.load({
               .then((v) => {
                 setAllRows(v.records);
                 setServerTotal(v.total);
-                setFormatCatalog(old => {
-                  const formats = new Map(old.map(f => [f.key, f]));
-                  for (const r of v.records) {
-                    const key = formatKey(r);
-                    if (!formats.has(key)) formats.set(key, { key, kind: FILE_KINDS.includes(r.kind) ? r.kind : "other" });
-                  }
-                  return formats.size === old.length ? old : [...formats.values()];
-                });
                 setLoading(false);
               })
               .catch((e) => {
@@ -1269,7 +1243,6 @@ window.__ModuleLoader__.load({
                     nav(w.title, { workspace: w.id }, status.counts?.workspaces[w.id] ?? 0),
                   ),
                 ),
-                h(FormatFilters, { catalog: formatCatalog, records: allRows, value: visibleFormats, onChange: chooseFormats, t }),
                 h(
                   "details",
                   null,
@@ -1299,16 +1272,9 @@ window.__ModuleLoader__.load({
                 ),
                 h(
                   "details",
-                  null,
+                  { open: true },
                   h("summary", null, t("readableFormats")),
-                  h(
-                    "div",
-                    { className: "ac-format-list", title: t("readableHint") },
-                    ...(status.config?.readableExtensions ?? []).map((ext) =>
-                      h("code", { key: ext }, `.${ext}`),
-                    ),
-                  ),
-                  h("div", { className: "ac-format-hint" }, t("readableHint")),
+                  h(FormatFilters, { extensions: status.config?.readableExtensions ?? [], value: visibleFormats, onChange: chooseFormats, t }),
                 ),
                 nav(t("missing"), { missing: true }),
                 nav(t("trashed"), { trashed: true }),
