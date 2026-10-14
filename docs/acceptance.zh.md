@@ -49,8 +49,9 @@ GitHub 仓库已有 `artifact`、`deepseek-harness`、`dsh-plugin` topic。
 ## 本轮补丁验证与发布
 
 - `npm run check` 通过；`npm test` 18/18通过。
-- 已生成 `.cache/dsh-artifact-center-0.1.1.tgz`，SHA-1为 `52a9c1164419a5f7a77a9fb1edf9c17312d918c4`。
+- 已生成 `.cache/dsh-artifact-center-0.1.1.tgz`，SHA-1为 `831b406a2987c29301c35742dc4ea4e0fe52c6be`。
 - 本机 `npm whoami` 成功，但发布返回 `EOTP`。因此0.1.1尚未发布，等待用户在本机终端完成一次性验证码验证。不要将验证码发送到对话。
+- GitHub推送第一次返回 `Empty reply from server`；改用HTTP/1.1并设置30秒低速超时后，仍返回低速超时。公开main仍为 `b838f23`，本轮修复只存在于本地提交中，未宣称已同步。已有topic和目录PR未重复创建。
 - 本机命令：`npm_config_cache="$PWD/.cache/npm" npm publish .cache/dsh-artifact-center-0.1.1.tgz --access public --registry=https://registry.npmjs.org`。如交互要求验证码，仅在本机终端完成。
 
 ## 本轮权限问题
