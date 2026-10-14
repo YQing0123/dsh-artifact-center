@@ -215,19 +215,22 @@ export function apply(ctx, config = {}) {
   );
   // Wait only this optional subsystem for storage/history; HTTP diagnostics mount immediately.
   ctx.inject(
-    ["storageDomain", "sessionQuery", "workspaceRegistry"],
+    ["sessionQuery", "workspaceRegistry"],
     async (subctx) => {
       if (initialized) return;
       initialized = true;
       ready = (async () => {
         let domain;
         try {
-          domain = await subctx.storageDomain.open(domainSpec);
+          const storage = subctx.get("storageDomain");
+          if (storage) domain = await storage.open(domainSpec);
+          else index.warn("storageDomain unavailable; using an in-memory index");
         } catch (e) {
           index.warn(e);
         }
         try {
           await index.init(domain);
+          if (!domain) index.status.phase = "degraded";
         } catch (e) {
           index.warn(e);
           index.status.phase = "degraded";

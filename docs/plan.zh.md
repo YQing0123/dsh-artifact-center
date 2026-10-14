@@ -1,12 +1,12 @@
 # 产物中心 · Artifact Center
-### DSH 插件方案 v1.2 · 决策已冻结，等待编码
+### DSH 插件方案 v1.3 · 决策已冻结，主体已发布，继续验收与补齐差异
 
 | | |
 |---|---|
 | **仓库** | https://github.com/YQing0123/dsh-artifact-center |
 | **包名** | `dsh-artifact-center` |
 | **中文名 / 英文名** | 产物中心 / Artifact Center |
-| **状态** | 方案与需求已冻结；仓库已建（空）；**未开始编码** |
+| **状态** | 0.1.0 已发布 npm；GitHub topic 已设置；目录 PR #7329 待审核；主体已实现，剩余验收差异见 [验收记录](acceptance.zh.md) |
 
 > **要解决的问题**：每次生成完文件后，想再找到它都很困难。
 > **依据**：对本机 DSH 源码 checkout（0.1.7-rc.2）与真实运行数据（8 个工作区 / 289 份会话日志 / 26,334 个文件 / 142 个真实 turn）的实测勘察与量化验证。文中区分 **【实测】**、**【源码确认】**、**【待验证】**。
@@ -17,12 +17,13 @@
 |---|---|---|
 | **本文件** `plan.zh.md` | 为什么这么做：现状勘察、决策、架构、实施计划、风险 | 想理解设计取舍时 |
 | [`requirements.zh.md`](requirements.zh.md) | 做什么：功能需求 FR-A~FR-J、非功能需求、数据模型、界面规格、**验收清单** | **编码与验收的唯一依据** |
-| [`dev-notes.zh.md`](dev-notes.zh.md) | 怎么不出事：DSH 插件开发规范、关键 API 速查、**22 条已知陷阱**、调试手段 | **动手写第一行代码前必读** |
+| [`dev-notes.zh.md`](dev-notes.zh.md) | 怎么不出事：DSH 插件开发规范、关键 API 速查、**24 条已知陷阱**、调试手段 | **动手写第一行代码前必读** |
 
 ## 变更记录
 
 | 版本 | 变更 |
 |---|---|
+| v1.3 | **两项实测校正**：① 启动失败语义——只有 7 个必需 entry（`agent-loop`/`webserver`/`modules`/`connection`/`headless-runner`/`acp`/`sdk-jsonrpc-server`）或 bootstrap Include 失败才致命，普通插件失败只是 warning（实测 web profile 5 个 entry 失败仍正常启动）；② 回收站——`osascript` 实测可用，但 macOS TCC 使 Host 进程读不了 `~/.Trash`（`ls` 返回 `total 0` 的假阳性），成功判据改为「退出码 0 + 源路径消失」。另修正 CLI：`dsh web` 本身即 `--profile web`。陷阱清单由 22 条增至 24 条 |
 | v1.2 | **交接一致性校验**：① 统一 HTTP 路由前缀为 `/artifact-center/*`（原先 plan 用 `/artifacts/*`，与 dev-notes/requirements 不一致）；② 包形态改为**纯 JS、零构建**（根目录 `index.js` + `client.js`，去掉 `src/`、`tsconfig.json`、`tsdown.config.ts`、`lib/`），与 dev-notes §7.2 路线 A 对齐；③ 统一 P0 为**六条链路**并同步 requirements §9；④ 回填真实仓库地址与 awesome-dsh-plugin 条目路径 |
 | v1.1 | 仓库创建（`YQing0123/dsh-artifact-center`）；拆分出需求规格与开发注意事项两份文档；统一文档名为 ASCII |
 | **v1.0** | **决策全部锁定 + 插件命名**：Markdown/Mermaid 渲染保留；索引口径＝仅"对话产出"；回填全部 289 份历史会话；增加 `artifact_search` Agent 工具；`dsh-better-sidebar` 作可选预览增强；**定名 `dsh-artifact-center`（产物中心）** |

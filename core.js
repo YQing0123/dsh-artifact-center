@@ -201,7 +201,7 @@ export class ArtifactIndex {
       ...config,
       readableExtensions:
         config.readableExtensions?.length
-          ? [...new Set(config.readableExtensions.map((x) => String(x).replace(/^\\./, "").toLowerCase()))]
+          ? [...new Set(config.readableExtensions.map((x) => String(x).replace(/^\./, "").toLowerCase()))]
           : READABLE_EXTENSIONS,
     };
     this.records = new Map();
@@ -432,8 +432,8 @@ export class ArtifactIndex {
   async updateTitle(sessionId, title) {
     for (const [id, r] of this.records) {
       if (
-        !r.versions?.some((v) => v.sessionId === sessionId) ||
-        (r.sessionId === sessionId && r.sessionTitle === title)
+        !r.versions?.some((v) => v.sessionId === sessionId && v.sessionTitle !== title) &&
+        !(r.sessionId === sessionId && r.sessionTitle !== title)
       )
         continue;
       const updated = {
@@ -593,13 +593,20 @@ export class ArtifactIndex {
   }
   async cleanMissing() {
     let count = 0;
+    const sessions = new Set();
     for (const [id, r] of this.records)
       if (r.missing && !r.trashed) {
+        for (const v of r.versions ?? []) if (v.sessionId) sessions.add(v.sessionId);
+        if (r.sessionId) sessions.add(r.sessionId);
         if (this.domain) await this.domain.table("artifacts").delete(id);
         this.records.delete(id);
         this.recordRevision++;
         count++;
       }
+    for (const sessionId of sessions) {
+      if (this.domain) await this.domain.table("cursors").delete(sessionId);
+      this.cursors.delete(sessionId);
+    }
     return count;
   }
   async text(record) {
@@ -703,8 +710,13 @@ export class ArtifactIndex {
       if(r.starred)counts.starred++;
       if(r.trashed)counts.trashed++;else if(r.missing)counts.missing++;
     }
+    const unavailable = ["sessionQuery", "workspaceRegistry"].filter((key) => !this.services[key]);
     return {
       ...this.status,
+      ...(unavailable.length ? {
+        phase: "degraded",
+        errors: [...this.status.errors, ...unavailable.map((key) => `${key} unavailable`)],
+      } : {}),
       counts,
       recordRevision: this.recordRevision,
       count: this.records.size,

@@ -77,6 +77,67 @@ async function fixture() {
     tables,
   };
 }
+test("extension configuration accepts leading dots and uppercase", async () => {
+  const f = await fixture();
+  const index = new ArtifactIndex(f.services, { readableExtensions: [".MD", "md", ".JSON"] });
+  assert.deepEqual(index.config.readableExtensions, ["md", "json"]);
+});
+
+test("title refresh repairs every historical version even when the latest title matches", async () => {
+  const f = await fixture(), file = path.join(f.root, "titles.md");
+  await writeFile(file, "history");
+  for (const [turn, sessionTitle] of [[1, "Old"], [2, "Current"]])
+    await f.index.upsert(f.workspace, { path: file, sessionId: "s1", turn, time: turn, sessionTitle, source: "write" });
+  await f.index.updateTitle("s1", "Current");
+  const record = [...f.index.records.values()][0];
+  assert.deepEqual(record.versions.map(v => v.sessionTitle), ["Current", "Current"]);
+});
+
+test("history refresh rediscovers a restored file after cleaning missing records", async () => {
+  const f = await fixture(), file = path.join(f.root, "clean-and-restore.md");
+  await writeFile(file, "original");
+  f.events.push({ type: "tool/call", seq: 1, time: 1, data: { name: "write", turn: 1, arguments: { file_path: file } } });
+  await f.index.backfill();
+  await rename(file, file + ".away");
+  await f.index.validate();
+  assert.equal(await f.index.cleanMissing(), 1);
+  assert.equal(f.index.cursors.has("s1"), false);
+  assert.equal(f.tables.get("cursors").has("s1"), false);
+  await rename(file + ".away", file);
+  await f.index.backfill();
+  assert.equal(f.index.records.size, 1);
+  assert.equal([...f.index.records.values()][0].missing, false);
+});
+
+test("missing optional storage preserves in-memory history indexing", async () => {
+  const f = await fixture();
+  await writeFile(path.join(f.root, "memory.md"), "memory index");
+  f.events.push({ type: "tool/call", seq: 1, time: 1, data: { name: "write", turn: 1, arguments: { file_path: "memory.md" } } });
+  const pending = [], disposers = [];
+  let tool;
+  const services = { ...f.services, tools: { register(value) { tool = value; return () => {}; } } };
+  const ctx = {
+    ...services,
+    webServer: { register: () => () => {} }, logger: f.services.logger,
+    get: key => services[key], on: () => () => {},
+    effect(fn) { const dispose = fn(); if (dispose) disposers.push(dispose); },
+    inject(_keys, fn) { pending.push(Promise.resolve(fn(ctx))); },
+  };
+  apply(ctx, { backfillOnStart: false, validationIntervalMs: 100000 });
+  await Promise.all(pending);
+  const routeIndex = new ArtifactIndex(f.services);
+  await routeIndex.init();
+  await routeIndex.backfill();
+  assert.equal((await routeIndex.search({ query: "memory.md" })).total, 1);
+  assert.equal(routeIndex.status.persistent, false);
+  const result = await tool.execute({ query: "none" }, { signal: new AbortController().signal });
+  assert.equal(result.status, "degraded");
+  for (const dispose of disposers.reverse()) await dispose();
+  const missing = new ArtifactIndex({});
+  assert.equal(missing.state().phase, "degraded");
+  assert.deepEqual(missing.state().errors, ["sessionQuery unavailable", "workspaceRegistry unavailable"]);
+});
+
 test("readable extension whitelist excludes unsupported indexed files", async () => {
   const f = await fixture();
   f.index.config.readableExtensions = ["md"];

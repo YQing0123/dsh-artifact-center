@@ -811,18 +811,24 @@ window.__ModuleLoader__.load({
           const m = modal;
           if (m.kind === "clean") await act("clean-missing", { confirm: true });
           else {
-            const value = await act("trash", {
-              ids: m.records.map((r) => r.id),
-              confirm: true,
-            });
-            if (value) {
-              setNotice(
-                value.results
-                  .filter((r) => !r.ok)
-                  .map((r) => r.error)
-                  .join("\n") || t("trashHint"),
-              );
-              setSelected(new Set());
+            setBusy(true);
+            const results = [];
+            const ids = [...new Set(m.records.map((r) => r.id))];
+            try {
+              for (let offset = 0; offset < ids.length; offset += 100) {
+                const batch = ids.slice(offset, offset + 100);
+                try {
+                  const value = await api("trash", { ids: batch, confirm: true });
+                  results.push(...value.results);
+                } catch (e) {
+                  results.push(...batch.map((id) => ({ id, ok: false, error: e.message })));
+                }
+              }
+              setNotice(results.filter((r) => !r.ok).map((r) => r.error).join("\n") || t("trashHint"));
+              setSelected(new Set(results.filter((r) => !r.ok).map((r) => r.id)));
+              refresh();
+            } finally {
+              setBusy(false);
             }
           }
           setModal(null);

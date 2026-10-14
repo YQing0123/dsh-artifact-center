@@ -16,7 +16,7 @@
 
 ## 安装
 
-npm 发布完成后可使用：
+已发布基线版本 0.1.0，可使用：
 
 ```sh
 dsh plugin --profile web add dsh-artifact-center
@@ -34,7 +34,7 @@ dsh plugin --profile web add github:YQing0123/dsh-artifact-center
 
 历史回填读取宿主 `sessionQuery.readSession()` 的完整事件，提取写文件、编辑文件与显式交付路径。实时索引在每轮结束后比较工作区快照，捕获 shell 和 subprocess 产物；超过默认 500 个变化文件的轮次折叠为批量概要。
 
-首次快照只作基线，避免把原有源码和依赖全部误算成对话产物。没有留下路径记录的历史 shell 产物无法可靠补推；并行任务产生的快照变化也只能标为“推断”。旧格式日志如果被宿主迁移器拒绝，会单独显示错误，不修改原日志。
+首次快照只作基线，避免把原有源码和依赖全部误算成对话产物。没有留下路径记录的历史 shell 产物无法可靠补推；并行任务产生的快照变化也只能标为“推断”。旧格式日志如果被宿主迁移器拒绝，会单独显示错误，不修改原日志。删除索引后目前无法重建仅有快照来源的历史；重启也不会把停机期间的任意文件变化归属到某个对话。`enableBetterSidebar` 当前仅为预留配置，尚未接入该插件的委托预览；自带 Markdown/Mermaid 渲染可独立工作。
 
 默认最多索引 50,000 条，普通预览上限 20 MiB，文本检索与预览默认读取 1 MiB。定期校检默认每 5 分钟执行一次。默认忽略 `.git`、`node_modules`、`dist`、`build`、`.next`、`__pycache__`、`.venv`、`target`、`.cache`、`.dsh`。
 

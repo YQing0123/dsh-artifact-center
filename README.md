@@ -15,11 +15,11 @@ Find the file a DSH conversation produced, together with its workspace and conve
 - Missing-file checks and confirmed moves to the system trash. Retrieve a file using your file manager, then check files to restore its index status.
 - A read-only `artifact_search` Agent tool and Chinese/English UI.
 
-History records provenance and metadata; it **does not preserve old file contents**. Snapshot results are labeled as inferred because filesystem changes cannot prove which concurrent task caused them. Historical shell outputs that have no recorded path cannot be reconstructed from current files alone.
+History records provenance and metadata; it **does not preserve old file contents**. Snapshot results are labeled as inferred because filesystem changes cannot prove which concurrent task caused them. Historical shell outputs that have no recorded path cannot be reconstructed from current files alone. Snapshot-only provenance cannot currently be rebuilt after deleting its index, and restart establishes a fresh baseline rather than attributing changes made while the Host was stopped. `enableBetterSidebar` is reserved; delegation to that optional plugin is not implemented. The built-in Markdown and Mermaid renderers work independently.
 
 ## Install
 
-From npm after the release is published:
+From npm (published baseline: 0.1.0):
 
 ```sh
 dsh plugin --profile web add dsh-artifact-center
