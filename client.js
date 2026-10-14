@@ -3,7 +3,7 @@ window.__ModuleLoader__.load({
   factory(require) {
     const React = require("react"),
       h = React.createElement,
-      { useState, useEffect, useRef, useSyncExternalStore } = React;
+      { useState, useEffect, useMemo, useRef, useSyncExternalStore } = React;
     const en = {
       panel: "Artifact center",
       subtitle: "Files, with their conversation history.",
@@ -113,6 +113,31 @@ window.__ModuleLoader__.load({
       countLimit: "Results are capped at the configured index limit.",
       readableFormats: "Readable formats",
       readableHint: "Choose supported extensions in cordis.patch.yml.",
+      visibleFormats: "Show file types",
+      moreActions: "More file actions",
+      fileInfo: "File information",
+      expandPreview: "Expand preview",
+      splitPreview: "Split preview",
+      noApps: "No other applications available",
+      formatHint: "Checked formats appear in the list. Your choice is remembered.",
+      allFormats: "All formats",
+      selectAll: "Select all",
+      selectNone: "Clear selection",
+      showType: "Show",
+      noExtension: "No extension",
+      formatSelection: "formats shown",
+      resetFormats: "Show all formats",
+      fileTags: "Tags",
+      addTag: "Add tags",
+      editTags: "Edit tags",
+      tagInput: "New tag",
+      tagHint: "Press Enter or use a comma to add tags. Save to apply changes.",
+      tagPlaceholder: "Add a tag…",
+      suggestedTags: "Existing tags",
+      removeTag: "Remove tag",
+      noTags: "No tags yet",
+      saveTags: "Save tags",
+      tagLimit: "Use up to 30 tags, with at most 80 characters per tag.",
     };
     const zh = {
       panel: "产物中心",
@@ -217,6 +242,31 @@ window.__ModuleLoader__.load({
       countLimit: "结果数量受配置的索引上限限制。",
       readableFormats: "可读取格式",
       readableHint: "可在 cordis.patch.yml 中从支持的扩展名里选择。",
+      visibleFormats: "展示文件类型",
+      moreActions: "更多文件操作",
+      fileInfo: "文件信息",
+      expandPreview: "展开预览",
+      splitPreview: "分栏预览",
+      noApps: "没有其他可用应用",
+      formatHint: "勾选的格式才会展示，选择会自动记住。",
+      allFormats: "全部格式",
+      selectAll: "全选",
+      selectNone: "清空",
+      showType: "显示",
+      noExtension: "无扩展名",
+      formatSelection: "种格式已展示",
+      resetFormats: "展示全部格式",
+      fileTags: "标签",
+      addTag: "添加标签",
+      editTags: "编辑标签",
+      tagInput: "新标签",
+      tagHint: "输入后按回车或逗号添加，保存后生效。",
+      tagPlaceholder: "输入标签名称…",
+      suggestedTags: "已有标签",
+      removeTag: "移除标签",
+      noTags: "尚未添加标签",
+      saveTags: "保存标签",
+      tagLimit: "最多添加30个标签，每个标签不超过80个字符。",
     };
     const css = `
 .ac-nav{background:color-mix(in srgb,var(--dsw-alias-bg-layer-2) 38%,transparent);padding:14px 10px 18px}.ac-nav>button:first-child{margin-bottom:4px}.ac-nav details{margin:8px 0 0;border-top:1px solid color-mix(in srgb,var(--dsw-alias-border-l2) 65%,transparent);padding-top:5px}.ac-nav summary{font-size:10px;letter-spacing:.08em;text-transform:uppercase}.ac-nav details button{padding:7px 9px;border-radius:7px}.ac-nav details button:hover{background:color-mix(in srgb,var(--dsw-alias-interactive-bg-hover) 72%,transparent)}.ac-nav .ac-active{box-shadow:inset 3px 0 var(--dsw-alias-brand-primary);background:color-mix(in srgb,var(--dsw-alias-brand-primary) 10%,transparent)}.ac-source-badge{font-size:10px!important;line-height:16px!important;padding:0 5px!important;border-radius:4px!important;white-space:nowrap}.ac-format-list{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px 9px}.ac-format-list code{font-size:10px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);border:1px solid var(--dsw-alias-border-l2);border-radius:4px;padding:2px 5px}.ac-format-hint{padding:0 8px 8px;color:var(--dsw-alias-label-secondary);font-size:10px;line-height:1.4}
@@ -224,6 +274,50 @@ window.__ModuleLoader__.load({
 .ac-root *{box-sizing:border-box}.ac-root button,.ac-root input,.ac-root select,.ac-root textarea{font:inherit;color:inherit}.ac-root button,.ac-root select{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-2);border-radius:6px;padding:7px 10px;cursor:pointer}.ac-root button:hover{background:var(--dsw-alias-interactive-bg-hover)}.ac-root button:disabled{opacity:.45;cursor:default}.ac-root :focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}.ac-root .ac-primary{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-layer-1);border-color:var(--dsw-alias-brand-primary)}
 .ac-head{padding:22px 24px 16px;border-bottom:1px solid var(--dsw-alias-border-l2)}.ac-heading{display:flex;align-items:center;gap:12px;margin-bottom:18px}.ac-heading h1{font-size:23px;letter-spacing:-.6px;font-weight:650;margin:0}.ac-subtitle{color:var(--dsw-alias-label-secondary);font-size:12px;margin-top:4px}.ac-heading .ac-status{margin-left:auto}.ac-status{display:flex;align-items:center;gap:6px;color:var(--dsw-alias-label-secondary);font-size:12px}.ac-dot{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-brand-primary)}.ac-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ac-search{flex:1;min-width:160px;max-width:560px;position:relative}.ac-search input{width:100%;padding:10px 12px 10px 34px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;background:var(--dsw-alias-bg-layer-2)}.ac-search svg{position:absolute;left:11px;top:12px}.ac-toggle{display:flex;align-items:center;gap:6px;white-space:nowrap}.ac-toggle input{accent-color:var(--dsw-alias-brand-primary)}.ac-body{flex:1;min-height:0;display:flex}.ac-nav{width:210px;flex-shrink:0;overflow:auto;padding:12px;border-right:1px solid var(--dsw-alias-border-l2)}.ac-nav button{border:0;background:none;display:flex;align-items:center;width:100%;text-align:left;padding:9px;gap:8px}.ac-nav .ac-active{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-brand-primary);font-weight:600}.ac-nav .ac-count{margin-left:auto;font-size:11px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}.ac-nav details{margin-top:8px}.ac-nav summary{cursor:pointer;color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:600;padding:10px 8px;list-style-position:inside}.ac-main{flex:1;min-width:0;display:flex;flex-direction:column}.ac-listbar{display:flex;gap:8px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--dsw-alias-border-l2)}.ac-listbar .ac-total{margin-right:auto;color:var(--dsw-alias-label-secondary)}.ac-scroll{flex:1;overflow:auto;min-height:140px;position:relative}.ac-columns,.ac-row{display:grid;grid-template-columns:28px minmax(180px,2.2fr) minmax(105px,1fr) minmax(130px,1.2fr) 82px 94px;gap:10px;align-items:center;padding:0 18px}.ac-columns{height:34px;color:var(--dsw-alias-label-secondary);font-size:11px;background:var(--dsw-alias-bg-layer-2);border-bottom:1px solid var(--dsw-alias-border-l2);position:sticky;top:0;z-index:1;min-width:720px}.ac-row{height:68px;border-bottom:1px solid var(--dsw-alias-border-l1);min-width:720px}.ac-row:hover,.ac-row.ac-selected{background:var(--dsw-alias-interactive-bg-hover)}.ac-root .ac-link{background:none;border:0;padding:0;text-align:left;color:inherit;min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ac-file{display:flex;gap:10px;align-items:center;min-width:0}.ac-fileinfo{min-width:0;flex:1}.ac-fileinfo .ac-link{font-weight:600;width:100%;font-size:13px}.ac-path{color:var(--dsw-alias-label-secondary);font-family:ui-monospace,monospace;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:5px}.ac-glyph{width:30px;height:34px;border:1px solid var(--dsw-alias-border-l3);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--dsw-alias-brand-primary);font-size:9px;font-weight:700;text-transform:uppercase}.ac-meta{color:var(--dsw-alias-label-secondary);font-size:11px;overflow:hidden}.ac-badge{display:inline-flex;border:1px solid var(--dsw-alias-border-l2);border-radius:4px;padding:2px 5px;font-size:10px;margin:2px 3px 0 0;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ac-version{color:var(--dsw-alias-brand-primary);font-size:10px;margin-left:5px}.ac-empty{padding:70px 24px;text-align:center;color:var(--dsw-alias-label-secondary)}.ac-empty h2{color:var(--dsw-alias-label-primary);font-size:17px}.ac-footer{padding:8px 18px;border-top:1px solid var(--dsw-alias-border-l2);font-size:11px;color:var(--dsw-alias-label-secondary);display:flex;gap:12px;flex-wrap:wrap}.ac-notice{padding:10px 18px;background:var(--dsw-alias-bg-layer-3);border-bottom:1px solid var(--dsw-alias-border-l2);display:flex;gap:10px;align-items:center}.ac-notice span{flex:1;white-space:pre-wrap}.ac-preview{width:42%;min-width:320px;max-width:700px;border-left:1px solid var(--dsw-alias-border-l2);display:flex;flex-direction:column;background:var(--dsw-alias-bg-layer-2);overflow:auto}.ac-previewhead{padding:16px;border-bottom:1px solid var(--dsw-alias-border-l2)}.ac-previewhead h2{font-size:15px;margin:0 0 8px;overflow-wrap:anywhere}.ac-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}.ac-actions button{font-size:11px;padding:5px 7px}.ac-previewbody{padding:16px;overflow:auto;flex:1;min-height:240px}.ac-previewbody img{max-width:100%;height:auto;display:block;margin:auto}.ac-previewbody iframe{width:100%;height:440px;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1)}.ac-previewbody audio,.ac-previewbody video{width:100%}.ac-previewbody pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.65 ui-monospace,monospace;margin:0}.ac-previewbody table{border-collapse:collapse;font-size:12px}.ac-previewbody td,.ac-previewbody th{border:1px solid var(--dsw-alias-border-l2);padding:6px 8px}.ac-previewbody blockquote{border-left:3px solid var(--dsw-alias-brand-primary);padding-left:12px;color:var(--dsw-alias-label-secondary)}.ac-previewbody a{color:var(--dsw-alias-brand-primary)}.ac-previewbody svg{max-width:100%;height:auto}.ac-keyword{color:var(--dsw-alias-brand-primary);font-weight:600}.ac-previewmeta{padding:16px;border-top:1px solid var(--dsw-alias-border-l2)}.ac-previewmeta input,.ac-previewmeta textarea{width:100%;border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-1);padding:8px;border-radius:5px;margin:5px 0 8px}.ac-previewmeta textarea{resize:vertical;min-height:60px}.ac-timeline{list-style:none;padding:0;margin:12px 0}.ac-timeline li{border-left:2px solid var(--dsw-alias-border-l3);padding:0 0 12px 12px;font-size:11px;line-height:1.6}.ac-timeline .ac-link{color:var(--dsw-alias-brand-primary)}.ac-muted{color:var(--dsw-alias-label-secondary);font-size:11px;line-height:1.6}.ac-dialog{color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l3);border-radius:10px;max-width:620px;width:calc(100% - 40px);padding:24px;max-height:80vh;overflow:auto}.ac-dialog::backdrop{background:var(--dsw-alias-bg-mask)}.ac-dialog h2{font-size:18px;margin:0 0 12px}.ac-dialog ul{padding:0;list-style:none}.ac-dialog li{padding:10px 0;border-bottom:1px solid var(--dsw-alias-border-l2);overflow-wrap:anywhere}.ac-dialog .ac-actions{justify-content:flex-end}.ac-progress{height:3px;background:var(--dsw-alias-border-l2)}.ac-progress div{height:100%;background:var(--dsw-alias-brand-primary);transition:width .2s}
 @media(max-width:1100px){.ac-preview{width:46%;min-width:290px}.ac-nav{width:170px}.ac-head{padding:16px}.ac-heading h1{font-size:20px}}@media(max-width:760px){.ac-nav{width:150px}.ac-preview{position:absolute;inset:0;width:100%;max-width:none;z-index:5}.ac-body{position:relative}.ac-subtitle{display:none}.ac-heading{margin-bottom:12px}.ac-toolbar{gap:7px}.ac-heading .ac-status{font-size:10px}.ac-head{padding:12px}.ac-nav button{font-size:12px}}@media(prefers-reduced-motion:reduce){.ac-progress div{transition:none}}
+/* File-library controls: stable columns, quiet chips, content-first preview. */
+.ac-nav{width:224px;padding:12px 10px;background:var(--dsw-specific-sidebar-fill,var(--dsw-alias-bg-layer-1))}
+.ac-nav .ac-filter-hint{font-size:11px;line-height:1.6;color:var(--dsw-alias-label-secondary);margin:0 8px 10px}
+.ac-type-option{display:flex;align-items:center;gap:8px;padding:7px 8px;cursor:pointer;border-radius:6px;min-width:0}
+.ac-type-option:hover,.ac-type-group>summary:hover{background:var(--dsw-alias-bg-layer-2)}
+.ac-type-option input,.ac-type-group input{width:14px;height:14px;margin:0;flex-shrink:0;accent-color:var(--dsw-alias-brand-primary)}
+.ac-format-master{padding-bottom:8px;border-bottom:1px solid var(--dsw-alias-border-l1)}
+.ac-nav .ac-filter-actions{display:flex;gap:4px;padding:0 4px}.ac-nav .ac-filter-actions button{width:auto;padding:3px 7px;font-size:11px;color:var(--dsw-alias-label-secondary)}
+.ac-nav .ac-type-group{margin:3px 0;border:0;padding:0}.ac-type-group>summary{display:flex;align-items:center;gap:8px;list-style:none;letter-spacing:0;text-transform:none;font-size:12px;padding:8px;border-radius:6px}
+.ac-type-group>summary:before{content:'›';font-size:15px;line-height:14px;width:7px;transition:transform .12s}.ac-type-group[open]>summary:before{transform:rotate(90deg)}
+.ac-type-group>summary::-webkit-details-marker{display:none}.ac-extension-option{padding-left:32px;font-size:12px}.ac-extension-option>span:first-of-type{font-family:ui-monospace,SFMono-Regular,monospace}
+.ac-main{container:ac-files / inline-size}.ac-listbar{flex-wrap:wrap}.ac-scroll{overflow:auto}
+.ac-columns,.ac-row{display:grid;grid-template-columns:24px minmax(210px,2fr) minmax(160px,1.2fr) minmax(100px,.8fr) minmax(140px,1fr) 78px 92px;gap:12px;min-width:960px;padding-left:16px;padding-right:16px}
+.ac-columns{min-height:38px;background:var(--dsw-alias-bg-layer-1);font-size:11px;color:var(--dsw-alias-label-secondary);font-weight:500}
+.ac-row{height:68px;align-items:center;border-bottom:1px solid var(--dsw-alias-border-l1);padding-top:8px;padding-bottom:8px}
+.ac-columns>*,.ac-row>*{min-width:0}.ac-file{gap:10px;min-width:0}.ac-fileinfo{min-width:0}.ac-fileinfo>.ac-link{font-weight:550;max-width:100%;text-overflow:ellipsis;overflow:hidden;white-space:nowrap}
+.ac-fileinfo .ac-path{font-size:11px;margin-top:5px}.ac-glyph{font-size:9px;font-weight:650;letter-spacing:.025em;width:36px;min-width:36px;height:38px;border:1px solid var(--dsw-alias-border-l1);border-radius:7px;display:flex;align-items:center;justify-content:center;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary)}
+.ac-tags-cell{display:flex;align-items:center;gap:4px;flex-wrap:wrap;max-height:48px;overflow:hidden;min-width:0}
+.ac-root .ac-tag-chip{display:inline-flex;align-items:center;gap:5px;max-width:112px;min-width:0;padding:2px 7px;border:1px solid color-mix(in srgb,var(--dsw-alias-brand-primary) 16%,var(--dsw-alias-border-l1));background:color-mix(in srgb,var(--dsw-alias-brand-primary) 6%,var(--dsw-alias-bg-layer-1));border-radius:5px;color:var(--dsw-alias-label-primary);font-size:11px;line-height:17px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ac-root .ac-tag-edit,.ac-root .ac-tag-overflow{display:inline-flex;align-items:center;gap:4px;padding:2px 5px;min-height:22px;border:1px dashed var(--dsw-alias-border-l2);border-radius:5px;background:transparent;color:var(--dsw-alias-label-secondary);font-size:11px;line-height:16px;white-space:nowrap}
+.ac-tags-cell .ac-tag-edit{margin-left:auto;flex-shrink:0}.ac-root .ac-tag-overflow{border:0}.ac-tag-edit:hover{color:var(--dsw-alias-brand-primary)}
+.ac-dialog.ac-tag-dialog{width:480px;max-width:calc(100vw - 32px);padding:24px;border-radius:12px}.ac-tag-heading{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}.ac-tag-heading h2{margin:0;font-size:18px}.ac-tag-heading>button{border:0;padding:3px 7px;background:none;font-size:20px}.ac-tag-filename{max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--dsw-alias-label-secondary);margin:7px 0 0}
+.ac-tag-values{display:flex;flex-wrap:wrap;gap:7px;min-height:56px;align-content:flex-start;padding:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;margin:16px 0}.ac-tag-dialog .ac-tag-chip{max-width:100%;white-space:normal;overflow-wrap:anywhere}.ac-tag-chip>button{border:0;padding:0 2px;background:none;color:var(--dsw-alias-label-secondary);font-size:14px;flex-shrink:0}
+.ac-tag-input-label{display:block;font-size:12px;margin-bottom:7px}.ac-tag-dialog input{width:100%;padding:10px 12px;border:1px solid var(--dsw-alias-border-l2);border-radius:7px;background:var(--dsw-alias-bg-layer-1)}.ac-tag-suggestions>div{display:flex;gap:6px;flex-wrap:wrap}.ac-tag-suggestions>p{font-size:11px;margin:16px 0 7px}.ac-tag-dialog .ac-actions{justify-content:flex-end;gap:8px;margin-top:24px}.ac-tag-error{color:var(--dsw-alias-state-error-primary);font-size:12px}
+.ac-body{position:relative}.ac-preview{display:flex;flex-direction:column;position:relative;inset:auto;width:62%;min-width:420px;max-width:none;min-height:0;height:100%;overflow:hidden;border-left:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1)}
+.ac-preview.ac-preview-wide{width:100%;min-width:0;max-width:none;flex:1;border-left:0}
+.ac-previewhead{display:flex;align-items:center;gap:12px;padding:10px 16px;min-height:64px;flex-shrink:0;border-bottom:1px solid var(--dsw-alias-border-l1);z-index:3;background:var(--dsw-alias-bg-layer-1)}
+.ac-preview-filetype{font-size:10px;font-weight:650;color:var(--dsw-alias-label-secondary);padding:8px 6px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;flex-shrink:0}
+.ac-preview-title{flex:1;min-width:0}.ac-preview-title h2{font-size:14px;font-weight:600;margin:0 0 4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.4}.ac-preview-title>span{font-size:10px}
+.ac-preview-tools{display:flex;align-items:center;gap:3px;flex-shrink:0}.ac-root .ac-icon-button,.ac-file-menu>summary{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;padding:6px;border:0;border-radius:6px;background:transparent;color:var(--dsw-alias-label-secondary);cursor:pointer;list-style:none}
+.ac-root .ac-icon-button:hover,.ac-file-menu>summary:hover{background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}.ac-icon-button[aria-pressed=true]{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 10%,transparent);color:var(--dsw-alias-brand-primary)}.ac-tool-divider{height:18px;border-left:1px solid var(--dsw-alias-border-l1);margin:0 4px}
+.ac-file-menu{position:relative;margin:0}.ac-file-menu>summary::-webkit-details-marker{display:none}.ac-file-menu-items{position:absolute;right:0;top:36px;min-width:230px;max-width:calc(100vw - 32px);max-height:60vh;overflow:auto;padding:5px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-overlay);box-shadow:0 10px 28px #0002;z-index:10}
+.ac-root .ac-file-menu-items>button,.ac-root .ac-app-options>button{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;padding:9px 10px;text-align:left;font-size:12px}.ac-file-menu-items>button:hover,.ac-app-options>button:hover{background:var(--dsw-alias-bg-layer-2)}.ac-file-menu-items hr{border:0;border-top:1px solid var(--dsw-alias-border-l1);margin:5px}.ac-root .ac-danger{color:var(--dsw-alias-state-error-primary)}.ac-app-options{margin:2px 4px 4px 14px;padding-left:8px;border-left:1px solid var(--dsw-alias-border-l2)}
+.ac-preview-layout{display:flex;flex:1;min-height:0;min-width:0;overflow:hidden;position:relative}.ac-previewbody{flex:1;min-width:0;min-height:0;overflow:auto;padding:24px;background:var(--dsw-alias-bg-layer-2)}
+.ac-previewbody.ac-preview-frame{padding:0}.ac-previewbody iframe{display:block;width:100%;height:100%;min-height:0;border:0;background:var(--dsw-alias-bg-layer-1)}
+.ac-rendered-document{max-width:880px;margin:0 auto;min-height:100%;padding:28px 36px;background:var(--dsw-alias-bg-layer-1);border:1px solid var(--dsw-alias-border-l1);border-radius:8px;font-size:14px;line-height:1.8;overflow-wrap:anywhere}.ac-rendered-document h1{font-size:26px;line-height:1.35;margin-top:0}.ac-rendered-document h2{font-size:20px;margin-top:1.6em}.ac-rendered-document pre{overflow:auto}.ac-rendered-document svg{max-width:100%}
+.ac-previewbody .ac-rendered-code{margin:0;padding:20px;min-height:100%;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-layer-1);font-size:12px;line-height:1.7;overflow:auto}.ac-previewbody table{min-width:100%;background:var(--dsw-alias-bg-layer-1);font-size:12px}.ac-previewbody video,.ac-previewbody audio{max-width:100%;display:block;margin:24px auto}
+.ac-image-preview{height:100%;width:100%;display:flex;flex-direction:column;align-items:center;gap:16px}.ac-image-controls{display:flex;align-items:center;gap:8px;font-size:11px;flex-shrink:0}.ac-image-preview img{display:block;object-fit:contain;margin:auto;flex-shrink:0}
+.ac-previewmeta{width:280px;flex-shrink:0;max-height:100%;overflow:auto;padding:16px;border:0;border-left:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);font-size:12px}.ac-info-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.ac-info-heading h3{font-size:13px;margin:0}.ac-info-path{font-size:11px;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere;line-height:1.6}.ac-previewmeta h4{font-size:11px;margin:20px 0 8px}.ac-info-tags{display:flex;gap:5px;flex-wrap:wrap}.ac-note-label{display:block;margin:20px 0 8px}.ac-note-label textarea{display:block;width:100%;min-height:80px;margin-top:8px;border:1px solid var(--dsw-alias-border-l2);border-radius:6px;padding:8px;background:var(--dsw-alias-bg-layer-1);resize:vertical}.ac-history{margin-top:24px;border-top:1px solid var(--dsw-alias-border-l1);padding-top:14px}.ac-history>summary{font-size:12px;cursor:pointer}.ac-history>p{font-size:11px;line-height:1.6}.ac-preview-location{height:27px;flex-shrink:0;border-top:1px solid var(--dsw-alias-border-l1);padding:6px 16px;font-size:10px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@container ac-files (max-width:900px){.ac-columns,.ac-row{grid-template-columns:24px minmax(190px,1.6fr) minmax(160px,1fr) 90px;min-width:560px}.ac-columns>:nth-child(4),.ac-row>:nth-child(4),.ac-columns>:nth-child(5),.ac-row>:nth-child(5),.ac-columns>:nth-child(6),.ac-row>:nth-child(6){display:none}}
+@container ac-files (max-width:580px){.ac-columns,.ac-row{grid-template-columns:22px minmax(170px,1.4fr) minmax(145px,1fr);min-width:395px;gap:10px;padding-left:12px;padding-right:12px}.ac-columns>:nth-child(7),.ac-row>:nth-child(7){display:none}}
+@media(max-width:1100px){.ac-nav{width:190px}.ac-previewhead{padding:10px 12px;gap:8px}.ac-preview-filetype{display:none}}
+@media(max-width:760px){.ac-nav{width:154px}.ac-preview{position:absolute;inset:0;width:100%;min-width:0;z-index:4}.ac-previewhead{flex-wrap:wrap}.ac-preview-title{min-width:120px}.ac-preview-tools{margin-left:auto}.ac-previewbody{padding:12px}.ac-rendered-document{padding:20px}.ac-previewmeta{position:absolute;right:0;top:0;bottom:0;z-index:2;width:min(280px,90%);box-shadow:-8px 0 24px #0001}}
+@media(prefers-reduced-motion:reduce){.ac-type-group>summary:before{transition:none}}
 `;
     function Icon({ kind = "folder", size = 18 }) {
       const paths = {
@@ -232,6 +326,16 @@ window.__ModuleLoader__.load({
         star: "m12 3 3 6 6 1-4.5 4.5 1 6.5-5.5-3-5.5 3 1-6.5L3 10l6-1z",
         clock: "M12 7v5l3 2 M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0",
         file: "M6 3h8l4 4v14H6z M14 3v5h4 M9 12h6 M9 16h6",
+        open: "M14 3h7v7 M21 3 11 13 M11 5H4v16h16v-7",
+        copy: "M9 9h12v12H9z M15 9V3H3v12h6",
+        info: "M12 10v7 M12 7h.01 M21 12a9 9 0 1 1-18 0a9 9 0 0 1 18 0",
+        expand: "M8 3H3v5 M16 3h5v5 M21 16v5h-5 M3 16v5h5",
+        split: "M3 4h18v16H3z M12 4v16",
+        more: "M5 11h.01v2H5z M12 11h.01v2H12z M19 11h.01v2H19z",
+        close: "m6 6 12 12 M6 18 18 6",
+        tag: "M3 3h8l10 10-8 8L3 11z M7 7h.01",
+        trash: "M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7",
+        link: "m10 14 4-4 M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0 M16 8l1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0",
       };
       return h(
         "svg",
@@ -437,10 +541,10 @@ window.__ModuleLoader__.load({
       if (r.kind === "image")
         child = h(
           "div",
-          null,
+          { className: "ac-image-preview" },
           h(
             "label",
-            { className: "ac-muted" },
+            { className: "ac-muted ac-image-controls" },
             t("zoom"),
             h("input", {
               type: "range",
@@ -453,7 +557,7 @@ window.__ModuleLoader__.load({
           h("img", {
             src: url,
             alt: r.name,
-            style: { width: `${scale}%`, maxWidth: "none" },
+            style: { width: scale === 100 ? "auto" : `${scale}%`, maxWidth: scale <= 100 ? "100%" : "none", maxHeight: scale === 100 ? "calc(100% - 48px)" : "none" },
             onError: () => setError(t("error")),
           }),
         );
@@ -475,11 +579,12 @@ window.__ModuleLoader__.load({
         child = markup
           ? h("div", {
               ref: diagram,
+              className: "ac-rendered-document",
               dangerouslySetInnerHTML: { __html: markup },
             })
           : h("p", null, t("loading"));
       else if (r.ext === ".mmd")
-        child = h("div", { ref: diagram }, text === null ? t("loading") : text);
+        child = h("div", { ref: diagram, className: "ac-rendered-document" }, text === null ? t("loading") : text);
       else if ([".csv", ".tsv"].includes(r.ext))
         child =
           text === null
@@ -502,7 +607,7 @@ window.__ModuleLoader__.load({
                   ),
                 ),
               );
-      else if (text !== null) child = h("pre", null, highlighted(text));
+      else if (text !== null) child = h("pre", { className: "ac-rendered-code" }, highlighted(text));
       else if (["code", "data"].includes(r.kind) || r.ext === ".txt")
         child = h("p", null, t("loading"));
       else
@@ -585,11 +690,183 @@ window.__ModuleLoader__.load({
         ),
       );
     }
-    function InlineTags({record,t,onSave}) {
-      const [editing,setEditing]=useState(false),[value,setValue]=useState('');
-      if(!editing)return h('button',{className:'ac-badge',title:t('addTags'),'aria-label':`${t('tags')} ${record.name}`,onClick:()=>{setValue((record.tags??[]).join(', '));setEditing(true);}},'+');
-      const save=async()=>{await onSave({id:record.id,patch:{tags:value.split(/[,，]/).map(v=>v.trim()).filter(Boolean)}});setEditing(false);};
-      return h('span',null,h('input',{value,autoFocus:true,'aria-label':t('addTags'),style:{width:120,maxWidth:'70%',border:'1px solid var(--dsw-alias-border-l2)',background:'var(--dsw-alias-bg-layer-1)',padding:'2px 4px'},onChange:e=>setValue(e.target.value),onKeyDown:e=>{if(e.key==='Enter'){e.preventDefault();save();}if(e.key==='Escape')setEditing(false);}}),h('button',{className:'ac-badge',onClick:save},t('save')));
+    function IconButton({ kind, label, ...props }) {
+      return h("button", { ...props, className: `ac-icon-button ${props.className ?? ""}`, title: label, "aria-label": label }, h(Icon, { kind, size: 17 }));
+    }
+    function ActionMenu({ t, children }) {
+      const ref = useRef();
+      useEffect(() => {
+        const dismiss = e => {
+          if (e.type === "keydown") {
+            if (e.key !== "Escape" || !ref.current?.open) return;
+            e.stopPropagation(); ref.current.open = false; ref.current.querySelector("summary")?.focus();
+          } else if (ref.current && !ref.current.contains(e.target)) ref.current.open = false;
+        };
+        document.addEventListener("pointerdown", dismiss);
+        document.addEventListener("keydown", dismiss);
+        return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", dismiss); };
+      }, []);
+      return h("details", { ref, className: "ac-file-menu" },
+        h("summary", { title: t("moreActions"), "aria-label": t("moreActions") }, h(Icon, { kind: "more", size: 17 })),
+        h("div", { className: "ac-file-menu-items", onClick: e => {
+          const button = e.target.closest("button");
+          if (button && !button.hasAttribute("data-keep-open")) ref.current.open = false;
+        } }, children));
+    }
+    const FORMAT_STORAGE_KEY = "dsh.artifact-center.visible-formats.v1";
+    const FILE_KINDS = ["doc", "sheet", "slide", "image", "web", "data", "code", "media", "archive", "other"];
+    const formatKey = (record) => record.burst ? "$batch" : (record.ext?.toLowerCase() || "$none");
+    function readVisibleFormats() {
+      try {
+        const value = JSON.parse(localStorage.getItem(FORMAT_STORAGE_KEY));
+        return Array.isArray(value) && value.length <= 512 && value.every(x => typeof x === "string" && x.length <= 100)
+          ? [...new Set(value)] : null;
+      } catch { return null; }
+    }
+    function MixedCheckbox({ mixed, ...props }) {
+      const ref = useRef();
+      useEffect(() => { if (ref.current) ref.current.indeterminate = !!mixed; }, [mixed]);
+      return h("input", { ...props, type: "checkbox", ref, "aria-checked": mixed ? "mixed" : props.checked });
+    }
+    function FormatFilters({ catalog, records, value, onChange, t }) {
+      const counts = useMemo(() => {
+        const result = new Map();
+        for (const r of records) result.set(formatKey(r), (result.get(formatKey(r)) ?? 0) + 1);
+        return result;
+      }, [records]);
+      const checked = (key) => value === null || value.includes(key);
+      const selectedCount = catalog.filter(f => checked(f.key)).length;
+      const toggleFormats = (keys, enabled) => {
+        const next = new Set(value ?? catalog.map(f => f.key));
+        for (const key of keys) enabled ? next.add(key) : next.delete(key);
+        onChange(catalog.every(f => next.has(f.key)) ? null : [...next]);
+      };
+      const label = (key) => key === "$batch" ? t("batch") : key === "$none" ? t("noExtension") : key;
+      return h("details", { open: true, className: "ac-format-filter" },
+        h("summary", null, t("visibleFormats")),
+        h("p", { className: "ac-filter-hint" }, t("formatHint")),
+        h("div", { className: "ac-format-master" },
+          h("label", { className: "ac-type-option" },
+            h(MixedCheckbox, { checked: value === null || (catalog.length > 0 && selectedCount === catalog.length),
+              mixed: selectedCount > 0 && selectedCount < catalog.length, disabled: !catalog.length,
+              onChange: e => onChange(e.target.checked ? null : []) }),
+            h("span", null, t("allFormats")),
+            h("span", { className: "ac-count" }, `${selectedCount}/${catalog.length}`)),
+          h("div", { className: "ac-filter-actions" },
+            h("button", { onClick: () => onChange(null) }, t("selectAll")),
+            h("button", { onClick: () => onChange([]) }, t("selectNone")))),
+        ...FILE_KINDS.map(kind => {
+          const formats = catalog.filter(f => f.kind === kind).sort((a, b) => a.key.localeCompare(b.key));
+          if (!formats.length) return null;
+          const selected = formats.filter(f => checked(f.key)).length;
+          return h("details", { key: kind, className: "ac-type-group", open: kind === "doc" },
+            h("summary", null,
+              h(MixedCheckbox, { checked: selected === formats.length, mixed: selected > 0 && selected < formats.length,
+                "aria-label": `${t("showType")} ${t(kind)}`, onClick: e => e.stopPropagation(),
+                onChange: e => toggleFormats(formats.map(f => f.key), e.target.checked) }),
+              h("span", null, t(kind)),
+              h("span", { className: "ac-count" }, formats.reduce((sum, f) => sum + (counts.get(f.key) ?? 0), 0))),
+            ...formats.map(f => h("label", { key: f.key, className: "ac-type-option ac-extension-option" },
+              h("input", { type: "checkbox", checked: checked(f.key),
+                onChange: e => toggleFormats([f.key], e.target.checked), "aria-label": `${t("showType")} ${label(f.key)}` }),
+              h("span", null, label(f.key)), h("span", { className: "ac-count" }, counts.get(f.key) ?? 0))));
+        }));
+    }
+    function TagEditor({ record, suggestions, t, onCancel, onSave }) {
+      const dialog = useRef(), input = useRef();
+      const [tags, setTags] = useState(record.tags ?? []), [draft, setDraft] = useState(""),
+        [saving, setSaving] = useState(false), [error, setError] = useState("");
+      useEffect(() => { dialog.current?.showModal(); input.current?.focus(); }, []);
+      const combined = (text = draft) => [...new Set([...tags, ...text.split(/[,，]/).map(v => v.trim()).filter(Boolean)])];
+      const valid = (values) => values.length <= 30 && values.every(v => v.length <= 80);
+      const add = (text = draft) => {
+        const next = combined(text);
+        if (!valid(next)) { setError(t("tagLimit")); return; }
+        setTags(next); setDraft(""); setError(""); input.current?.focus();
+      };
+      const save = async (event) => {
+        event.preventDefault();
+        if (saving) return;
+        const next = combined();
+        if (!valid(next)) { setError(t("tagLimit")); return; }
+        setSaving(true); setError("");
+        try { await onSave(next); } catch (e) { setError(e.message); }
+        finally { setSaving(false); }
+      };
+      return h("dialog", { ref: dialog, className: "ac-dialog ac-tag-dialog", "aria-labelledby": "ac-tag-title",
+        onCancel: e => { e.preventDefault(); if (!saving) onCancel(); } },
+        h("form", { onSubmit: save },
+          h("div", { className: "ac-tag-heading" },
+            h("div", null, h("h2", { id: "ac-tag-title" }, t("editTags")),
+              h("p", { className: "ac-tag-filename", title: record.path }, record.name)),
+            h("button", { type: "button", disabled: saving, "aria-label": t("close"), onClick: onCancel }, "×")),
+          h("p", { id: "ac-tag-hint", className: "ac-muted" }, t("tagHint")),
+          h("div", { className: "ac-tag-values", "aria-live": "polite" },
+            tags.length ? tags.map(tag => h("span", { key: tag, className: "ac-tag-chip" }, tag,
+              h("button", { type: "button", disabled: saving, "aria-label": `${t("removeTag")} ${tag}`,
+                onClick: () => setTags(old => old.filter(v => v !== tag)) }, "×")))
+              : h("span", { className: "ac-muted" }, t("noTags"))),
+          h("label", { className: "ac-tag-input-label", htmlFor: "ac-tag-input" }, t("tagInput")),
+          h("input", { id: "ac-tag-input", ref: input, value: draft, disabled: saving, placeholder: t("tagPlaceholder"),
+            "aria-describedby": "ac-tag-hint", onChange: e => setDraft(e.target.value),
+            onKeyDown: e => { if (!e.nativeEvent.isComposing && ["Enter", ",", "，"].includes(e.key)) { e.preventDefault(); add(); } } }),
+          suggestions.some(tag => !tags.includes(tag)) && h("div", { className: "ac-tag-suggestions" },
+            h("p", { className: "ac-muted" }, t("suggestedTags")),
+            h("div", null, ...suggestions.filter(tag => !tags.includes(tag)).slice(0, 12).map(tag =>
+              h("button", { key: tag, type: "button", disabled: saving, className: "ac-tag-chip", onClick: () => add(tag) }, "+ ", tag)))),
+          error && h("p", { role: "alert", className: "ac-tag-error" }, error),
+          h("div", { className: "ac-actions" },
+            h("button", { type: "button", disabled: saving, onClick: onCancel }, t("cancel")),
+            h("button", { type: "submit", className: "ac-primary", disabled: saving }, saving ? t("loading") : t("saveTags")))));
+    }
+    function PreviewPane({ record: r, config, t, busy, act, copy, onClose, openSession, editTags,
+      wide, setWide, info, setInfo, apps, loadApps, note, setNote, formatTime }) {
+      const unavailable = busy || r.missing || r.burst;
+      const action = (kind, key, props) => h(IconButton, { kind, label: t(key), ...props });
+      const menuItem = (kind, key, props) => h("button", { type: "button", ...props }, h(Icon, { kind, size: 16 }), t(key));
+      return h("aside", { className: `ac-preview${wide ? " ac-preview-wide" : ""}`, "aria-label": t("preview") },
+        h("header", { className: "ac-previewhead" },
+          h("span", { className: "ac-preview-filetype" }, r.ext?.slice(1).toUpperCase() || "FILE"),
+          h("div", { className: "ac-preview-title" }, h("h2", { title: r.path }, r.name),
+            h("span", { className: "ac-muted" }, `${bytes(r.size)} · ${t(r.source)}`)),
+          h("div", { className: "ac-preview-tools", role: "toolbar", "aria-label": t("preview") },
+            action("open", "open", { disabled: unavailable, onClick: () => act("open", { id: r.id }) }),
+            action("copy", "copy", { onClick: () => copy(r.path) }),
+            action("star", r.starred ? "unfavorite" : "favorite", { disabled: busy, "aria-pressed": !!r.starred,
+              onClick: () => act("patch", { id: r.id, patch: { starred: !r.starred } }) }),
+            h("span", { className: "ac-tool-divider" }),
+            action("info", "fileInfo", { "aria-pressed": info, onClick: () => setInfo(!info) }),
+            action(wide ? "split" : "expand", wide ? "splitPreview" : "expandPreview", { onClick: () => setWide(!wide) }),
+            h(ActionMenu, { key: r.id, t },
+              menuItem("open", "otherApps", { disabled: unavailable, "data-keep-open": true, onClick: loadApps }),
+              apps && h("div", { className: "ac-app-options" }, apps.length ? apps.map(app => h("button", { key: app.id, disabled: busy,
+                onClick: () => act("open", { id: r.id, application: app.id }) }, app.name)) : h("p", { className: "ac-muted" }, t("noApps"))),
+              menuItem("folder", "reveal", { disabled: unavailable, onClick: () => act("open", { id: r.id, action: "reveal" }) }),
+              menuItem("link", "copyLink", { onClick: () => copy(`[${r.name}](<${r.path}>)`) }),
+              menuItem("tag", "editTags", { onClick: editTags }),
+              menuItem("clock", "conversation", { disabled: !r.sessionId, onClick: () => openSession(r.sessionId) }),
+              h("hr"),
+              menuItem("trash", "trash", { className: "ac-danger", disabled: unavailable,
+                onClick: () => act("confirm-trash", { record: r }) })),
+            action("close", "close", { onClick: onClose }))),
+        h("div", { className: "ac-preview-layout" },
+          h("div", { className: `ac-previewbody ac-preview-${r.kind}${[".pdf", ".html", ".htm"].includes(r.ext) ? " ac-preview-frame" : ""}` },
+            h(PreviewContent, { record: r, t, config })),
+          info && h("section", { className: "ac-previewmeta", "aria-label": t("fileInfo") },
+            h("div", { className: "ac-info-heading" }, h("h3", null, t("fileInfo")), action("close", "close", { onClick: () => setInfo(false) })),
+            h("div", { className: "ac-info-path" }, r.path),
+            h("h4", null, t("fileTags")),
+            h("div", { className: "ac-info-tags" }, ...(r.tags ?? []).map(tag => h("span", { key: tag, className: "ac-tag-chip" }, tag)),
+              h("button", { className: "ac-tag-edit", onClick: editTags }, "+ ", t(r.tags?.length ? "editTags" : "addTag"))),
+            h("label", { className: "ac-note-label" }, t("note"), h("textarea", { value: note, onChange: e => setNote(e.target.value) })),
+            h("button", { disabled: busy || note === (r.note ?? ""), onClick: () => act("patch", { id: r.id, patch: { note } }) }, t("save")),
+            h("details", { className: "ac-history", open: true }, h("summary", null, t("versions")),
+              h("p", { className: "ac-muted" }, t("versionsHint")),
+              h("ol", { className: "ac-timeline" }, ...[...(r.versions ?? [])].reverse().map((v, i) => h("li", { key: i },
+                h("div", null, `${formatTime(v.time)} · ${t(v.source)} · ${bytes(v.size)}`),
+                h("button", { className: "ac-link", disabled: !v.sessionId, onClick: () => openSession(v.sessionId) }, v.sessionTitle ?? v.sessionId),
+                ` · ${v.turn ?? "—"}`)))))),
+        h("div", { className: "ac-preview-location", title: r.path }, r.relPath ?? r.path));
     }
     function createPage(ctx) {
       return function ArtifactPage() {
@@ -604,8 +881,11 @@ window.__ModuleLoader__.load({
             workspaces: [],
             config: { previewMaxBytes: 20971520 },
           }),
-          [rows, setRows] = useState([]),
-          [total, setTotal] = useState(0),
+          [allRows, setAllRows] = useState([]),
+          [serverTotal, setServerTotal] = useState(0),
+          [formatCatalog, setFormatCatalog] = useState([]),
+          [visibleFormats, setVisibleFormats] = useState(readVisibleFormats),
+          [tagTarget, setTagTarget] = useState(null),
           [query, setQuery] = useState(""),
           [content, setContent] = useState(false),
           [filter, setFilter] = useState({}),
@@ -614,17 +894,27 @@ window.__ModuleLoader__.load({
           [notice, setNotice] = useState(""),
           [selected, setSelected] = useState(new Set()),
           [preview, setPreview] = useState(null),
+          [previewWide, setPreviewWide] = useState(true),
+          [previewInfo, setPreviewInfo] = useState(false),
           [scroll, setScroll] = useState(0),
           [height, setHeight] = useState(500),
           [collapsed, setCollapsed] = useState(false),
           [modal, setModal] = useState(null),
           [busy, setBusy] = useState(false),
           [apps, setApps] = useState(null),
-          [tags, setTags] = useState(""),
           [note, setNote] = useState(""),
           [revision, setRevision] = useState(0);
         const listRef = useRef(),
           lastCount = useRef(-1);
+        const rows = useMemo(() => {
+          if (visibleFormats === null) return allRows;
+          const allowed = new Set(visibleFormats);
+          return allRows.filter(r => allowed.has(formatKey(r)));
+        }, [allRows, visibleFormats]);
+        const total = visibleFormats === null ? serverTotal : rows.length;
+        useEffect(() => {
+          try { localStorage.setItem(FORMAT_STORAGE_KEY, JSON.stringify(visibleFormats)); } catch { /* Current-tab filtering still works without browser storage. */ }
+        }, [visibleFormats]);
         useEffect(() => {
           const ctl = new AbortController();
           const update = () =>
@@ -662,8 +952,16 @@ window.__ModuleLoader__.load({
               else params.set(k, String(v));
             api(`list?${params}`, undefined, ctl.signal)
               .then((v) => {
-                setRows(v.records);
-                setTotal(v.total);
+                setAllRows(v.records);
+                setServerTotal(v.total);
+                setFormatCatalog(old => {
+                  const formats = new Map(old.map(f => [f.key, f]));
+                  for (const r of v.records) {
+                    const key = formatKey(r);
+                    if (!formats.has(key)) formats.set(key, { key, kind: FILE_KINDS.includes(r.kind) ? r.kind : "other" });
+                  }
+                  return formats.size === old.length ? old : [...formats.values()];
+                });
                 setLoading(false);
               })
               .catch((e) => {
@@ -681,7 +979,7 @@ window.__ModuleLoader__.load({
         useEffect(() => {
           setScroll(0);
           if (listRef.current) listRef.current.scrollTop = 0;
-        }, [query, filter, sort]);
+        }, [query, filter, sort, visibleFormats]);
         useEffect(() => {
           const el = listRef.current;
           if (!el) return;
@@ -693,7 +991,6 @@ window.__ModuleLoader__.load({
           ? (rows.find((r) => r.id === preview.id) ?? preview)
           : null;
         useEffect(() => {
-          setTags(current?.tags?.join(", ") ?? "");
           setNote(current?.note ?? "");
           setApps(null);
         }, [current?.id, current?.tags?.join(","), current?.note]);
@@ -725,6 +1022,12 @@ window.__ModuleLoader__.load({
           setFilter(f);
           setSelected(new Set());
         };
+        const chooseFormats = (value) => {
+          setVisibleFormats(value);
+          setSelected(new Set());
+          setPreview(old => old && value !== null && !value.includes(formatKey(old)) ? null : old);
+        };
+        const clearFilters = () => { choose({}); setQuery(""); setContent(false); chooseFormats(null); };
         const matches = (f) => JSON.stringify(filter) === JSON.stringify(f);
         const nav = (label, f, count, icon) =>
           h(
@@ -944,7 +1247,7 @@ window.__ModuleLoader__.load({
           h(
             "div",
             { className: "ac-body" },
-            !collapsed &&
+            !collapsed && !(current && previewWide) &&
               h(
                 "nav",
                 { className: "ac-nav", "aria-label": t("panel") },
@@ -966,27 +1269,7 @@ window.__ModuleLoader__.load({
                     nav(w.title, { workspace: w.id }, status.counts?.workspaces[w.id] ?? 0),
                   ),
                 ),
-                h(
-                  "details",
-                  { open: true },
-                  h("summary", null, t("types")),
-                  ...Object.keys(en)
-                    .filter((k) =>
-                      [
-                        "doc",
-                        "sheet",
-                        "slide",
-                        "image",
-                        "web",
-                        "data",
-                        "code",
-                        "media",
-                        "archive",
-                        "other",
-                      ].includes(k),
-                    )
-                    .map((k) => nav(t(k), { type: k }, typeCounts[k] ?? 0)),
-                ),
+                h(FormatFilters, { catalog: formatCatalog, records: allRows, value: visibleFormats, onChange: chooseFormats, t }),
                 h(
                   "details",
                   null,
@@ -1032,7 +1315,7 @@ window.__ModuleLoader__.load({
               ),
             h(
               "div",
-              { className: "ac-main" },
+              { className: "ac-main", style: { display: current && previewWide ? "none" : undefined } },
               h(
                 "div",
                 { className: "ac-listbar" },
@@ -1120,6 +1403,7 @@ window.__ModuleLoader__.load({
                       ),
                   }),
                   h("span", null, t("name")),
+                  h("span", null, t("fileTags")),
                   h("span", null, t("workspace")),
                   h("span", null, t("conversation")),
                   h("span", null, t("source")),
@@ -1135,10 +1419,7 @@ window.__ModuleLoader__.load({
                       h(
                         "button",
                         {
-                          onClick: () => {
-                            choose({});
-                            setQuery("");
-                          },
+                          onClick: clearFilters,
                         },
                         t("clear"),
                       ),
@@ -1207,26 +1488,20 @@ window.__ModuleLoader__.load({
                                   { className: "ac-path" },
                                   r.relPath ?? r.path,
                                 ),
-                                h(
-                                  "div",
-                                  null,
-                                  h(InlineTags,{record:r,t,onSave:data=>act('patch',data)}),
-                                   ...(r.tags ?? [])
-                                    .slice(0, 3)
-                                    .map((tag) =>
-                                      h(
-                                        "button",
-                                        {
-                                          key: tag,
-                                          className: "ac-badge",
-                                          onClick: () => choose({ tag }),
-                                        },
-                                        tag,
-                                      ),
-                                    ),
-                                ),
                               ),
                             ),
+                            h("div", { className: "ac-tags-cell" },
+                              ...(r.tags ?? []).slice(0, 2).map(tag => h("button", {
+                                key: tag, className: "ac-tag-chip", title: tag, onClick: () => choose({ tag }),
+                              }, tag)),
+                              (r.tags?.length ?? 0) > 2 && h("button", {
+                                className: "ac-tag-overflow", title: r.tags.join(", "),
+                                "aria-label": `${t("editTags")} ${r.name}`, onClick: () => setTagTarget(r),
+                              }, `+${r.tags.length - 2}`),
+                              h("button", { className: "ac-tag-edit", title: t(r.tags?.length ? "editTags" : "addTag"),
+                                "aria-label": `${t(r.tags?.length ? "editTags" : "addTag")} ${r.name}`,
+                                onClick: () => setTagTarget(r),
+                              }, "+", !r.tags?.length && h("span", null, t("addTag")))),
                             h(
                               "button",
                               {
@@ -1316,213 +1591,27 @@ window.__ModuleLoader__.load({
                   h("span", null, status.warnings.join(" · ")),
               ),
             ),
-            current &&
-              h(
-                "aside",
-                { className: "ac-preview", "aria-label": t("preview") },
-                h(
-                  "header",
-                  { className: "ac-previewhead" },
-                  h(
-                    "div",
-                    {
-                      style: { display: "flex", gap: 12, alignItems: "start" },
-                    },
-                    h("h2", { style: { flex: 1 } }, current.name),
-                    h(
-                      "button",
-                      {
-                        "aria-label": t("close"),
-                        onClick: () => setPreview(null),
-                      },
-                      "×",
-                    ),
-                  ),
-                  h(
-                    "div",
-                    { className: "ac-path", title: current.path },
-                    current.path,
-                  ),
-                  h(
-                    "div",
-                    { className: "ac-actions" },
-                    h(
-                      "button",
-                      {
-                        disabled: busy || current.missing || current.burst,
-                        onClick: () => act("open", { id: current.id }),
-                      },
-                      t("open"),
-                    ),
-                    h(
-                      "button",
-                      {
-                        disabled: current.missing || current.burst,
-                        onClick: async () => {
-                          try {
-                            setApps(await api(`applications?id=${current.id}`));
-                          } catch (e) {
-                            setNotice(e.message);
-                          }
-                        },
-                      },
-                      t("otherApps"),
-                    ),
-                    h(
-                      "button",
-                      {
-                        disabled: busy || current.missing || current.burst,
-                        onClick: () =>
-                          act("open", { id: current.id, action: "reveal" }),
-                      },
-                      t("reveal"),
-                    ),
-                    h(
-                      "button",
-                      { onClick: () => copy(current.path) },
-                      t("copy"),
-                    ),
-                    h(
-                      "button",
-                      {
-                        onClick: () =>
-                          copy(`[${current.name}](<${current.path}>)`),
-                      },
-                      t("copyLink"),
-                    ),
-                    h(
-                      "button",
-                      {
-                        disabled: busy,
-                        onClick: () =>
-                          act("patch", {
-                            id: current.id,
-                            patch: { starred: !current.starred },
-                          }),
-                      },
-                      t(current.starred ? "unfavorite" : "favorite"),
-                    ),
-                    h(
-                      "button",
-                      {
-                        disabled: busy || current.missing || current.burst,
-                        onClick: () =>
-                          setModal({ kind: "trash", records: [current] }),
-                      },
-                      t("trash"),
-                    ),
-                  ),
-                  apps &&
-                    h(
-                      "div",
-                      { className: "ac-actions" },
-                      ...apps.map((a) =>
-                        h(
-                          "button",
-                          {
-                            key: a.id,
-                            disabled: busy,
-                            onClick: () =>
-                              act("open", {
-                                id: current.id,
-                                application: a.id,
-                              }),
-                          },
-                          a.name,
-                        ),
-                      ),
-                    ),
-                ),
-                h(
-                  "div",
-                  { className: "ac-previewbody" },
-                  h(PreviewContent, {
-                    record: current,
-                    t,
-                    config: status.config,
-                  }),
-                ),
-                h(
-                  "section",
-                  { className: "ac-previewmeta" },
-                  h(
-                    "label",
-                    null,
-                    t("tags"),
-                    h("input", {
-                      value: tags,
-                      placeholder: t("addTags"),
-                      onChange: (e) => setTags(e.target.value),
-                    }),
-                  ),
-                  h(
-                    "label",
-                    null,
-                    t("note"),
-                    h("textarea", {
-                      value: note,
-                      onChange: (e) => setNote(e.target.value),
-                    }),
-                  ),
-                  h(
-                    "button",
-                    {
-                      disabled: busy,
-                      onClick: () =>
-                        act("patch", {
-                          id: current.id,
-                          patch: {
-                            tags: tags
-                              .split(/[,，]/)
-                              .map((v) => v.trim())
-                              .filter(Boolean),
-                            note,
-                          },
-                        }),
-                    },
-                    t("save"),
-                  ),
-                  h(
-                    "details",
-                    { style: { marginTop: 16 } },
-                    h("summary", null, t("versions")),
-                    h("p", { className: "ac-muted" }, t("versionsHint")),
-                    h(
-                      "ol",
-                      { className: "ac-timeline" },
-                      ...[...(current.versions ?? [])]
-                        .reverse()
-                        .map((v, i) =>
-                          h(
-                            "li",
-                            { key: i },
-                            h(
-                              "div",
-                              null,
-                              formatTime(v.time),
-                              " · ",
-                              t(v.source),
-                              " · ",
-                              bytes(v.size),
-                            ),
-                            h(
-                              "button",
-                              {
-                                className: "ac-link",
-                                onClick: () =>
-                                  v.sessionId && openSession(v.sessionId),
-                              },
-                              v.sessionTitle ?? v.sessionId,
-                            ),
-                            " · ",
-                            v.turn ?? "—",
-                          ),
-                        ),
-                    ),
-                  ),
-                ),
-              ),
+            current && h(PreviewPane, {
+              record: current, config: status.config, t, busy, copy, openSession, formatTime,
+              wide: previewWide, setWide: setPreviewWide, info: previewInfo, setInfo: setPreviewInfo,
+              note, setNote, apps,
+              onClose: () => setPreview(null), editTags: () => setTagTarget(current),
+              loadApps: async () => {
+                try { setApps(await api(`applications?id=${encodeURIComponent(current.id)}`)); }
+                catch (e) { setNotice(e.message); }
+              },
+              act: (action, data) => action === "confirm-trash"
+                ? setModal({ kind: "trash", records: [data.record] }) : act(action, data),
+            }),
           ),
+          tagTarget && h(TagEditor, {
+            key: tagTarget.id, record: tagTarget, suggestions: allTags, t,
+            onCancel: () => setTagTarget(null),
+            onSave: async (tags) => {
+              await api("patch", { id: tagTarget.id, patch: { tags } });
+              setTagTarget(null); setNotice(t("saved")); refresh();
+            },
+          }),
           modal &&
             h(ConfirmDialog, {
               modal,
