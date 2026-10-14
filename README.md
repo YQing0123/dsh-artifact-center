@@ -81,6 +81,8 @@ HTTP routes under `/artifact-center/*` require the Host's browser authentication
 
 Host and UI are plain JavaScript. Only the lazy Mermaid renderer is independently bundled; no Harness build preset or internal UI package is imported.
 
+With the isolated development Host and authenticated `artifact-p0` browser running, `npm run test:ui` checks fixture-only previews, tag errors and a 10,000-record virtual list. API writes are intercepted and never reach real storage or system actions. `npm run test:locale` checks the English UI and restores the original language preference.
+
 ```sh
 npm ci --legacy-peer-deps
 npm run build:vendor

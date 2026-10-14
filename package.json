@@ -27,6 +27,8 @@
     "build:vendor": "node scripts/vendor.mjs",
     "check": "node --check index.js && node --check core.js && node --check security.js && node --check client.js",
     "test": "node --test test/*.test.js",
+    "test:ui": "node scripts/ui-regression.mjs",
+    "test:locale": "node scripts/locale-regression.mjs",
     "prepack": "npm run check && npm test"
   },
   "repository": {

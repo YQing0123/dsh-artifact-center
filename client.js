@@ -967,7 +967,7 @@ window.__ModuleLoader__.load({
         useEffect(() => {
           setNote(current?.note ?? "");
           setApps(null);
-        }, [current?.id, current?.tags?.join(","), current?.note]);
+        }, [current?.id, current?.note]);
         const refresh = () => setRevision((v) => v + 1);
         const act = async (action, data) => {
           setBusy(true);
