@@ -9,6 +9,11 @@ dist/
 !vendor/
 
 # logs & OS noise
+.cache/
+.overflow-diagnostic-*.js
+outputs/
+output/
+.playwright-cli/
 *.log
 .DS_Store
 Thumbs.db

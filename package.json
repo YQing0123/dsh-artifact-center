@@ -1,0 +1,84 @@
+{
+  "name": "dsh-artifact-center",
+  "version": "0.1.0",
+  "description": "Artifact Center — browse, search and open files produced by DSH conversations across workspaces.",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "core.js",
+    "security.js",
+    "client.js",
+    "vendor/",
+    "locale/",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "build:vendor": "node scripts/vendor.mjs",
+    "check": "node --check index.js && node --check core.js && node --check security.js && node --check client.js",
+    "test": "node --test test/*.test.js",
+    "prepack": "npm run check && npm test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/YQing0123/dsh-artifact-center.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YQing0123/dsh-artifact-center/issues"
+  },
+  "homepage": "https://github.com/YQing0123/dsh-artifact-center#readme",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-locale"
+      ]
+    }
+  },
+  "dependencies": {
+    "zod": "^4.1.5"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": ">=4.0.0 <5",
+    "@deepseek-ai/dsh-native-command": "^0.1.7-rc.2 || ^0.2.0-rc.1",
+    "@deepseek-ai/schemastery": ">=3.0.0 <5"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-native-command": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@deepseek-ai/schemastery": "^3.18.4",
+    "dompurify": "^3.4.17",
+    "esbuild": "^0.28.2",
+    "markdown-it": "^15.0.2",
+    "mermaid": "^12.2.0"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "artifact",
+    "deliverables",
+    "file-index"
+  ]
+}
