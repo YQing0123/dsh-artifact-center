@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { mkdtemp, mkdir, writeFile, rename, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, rename, symlink, utimes } from "node:fs/promises";
 import { createServer } from "node:http";
 import {
   ArtifactIndex,
@@ -24,6 +24,7 @@ async function fixture() {
     get sessionIds() { return ["s1"]; },
   });
   assert.match(domainSpec.name, /^[a-z][a-z0-9_]*$/);
+  for (const name of Object.keys(domainSpec.tables)) assert.match(name, /^[a-z][a-z0-9_]*$/);
   const header = { id: "s1", cwd: root, createdAt: Date.now(), version: 4 };
   const events = [];
   const query = {
@@ -77,6 +78,109 @@ async function fixture() {
     tables,
   };
 }
+test("provenance rebuilds a cleared cache including snapshot history and user metadata", async () => {
+  const f = await fixture(), file = path.join(f.root, "shell.md");
+  await writeFile(file, "shell output");
+  await f.index.handleEvent({ header: f.header }, { type: "turn/end", turn: 1, time: Date.now() });
+  const record = [...f.index.records.values()][0];
+  await f.index.patch(record.id, { tags: ["Keep"], starred: true, note: "Durable" });
+  f.tables.get("artifacts").clear();
+  f.tables.get("cursors").clear();
+  f.tables.get("snapshots").clear();
+  await writeFile(path.join(f.root, "unrelated.md"), "not a conversation output");
+  const restarted = new ArtifactIndex(f.services);
+  await restarted.init(f.domain);
+  const restored = restarted.records.get(record.id);
+  assert.equal(restarted.records.size, 1);
+  assert.equal(restored.source, "snapshot");
+  assert.equal(restored.note, "Durable");
+  assert.equal(restored.starred, true);
+  assert.deepEqual(restored.tags, ["Keep"]);
+  assert.deepEqual(restored.versions, record.versions);
+});
+
+test("authoritative provenance survives interruption before writing the list cache", async () => {
+  const f = await fixture(), file = path.join(f.root, "interrupted.md");
+  await writeFile(file, "durable before cache");
+  let fail = true;
+  const original = f.domain.table;
+  f.domain.table = name => {
+    const table = original(name);
+    return name === "artifacts" ? { ...table, put: async (...args) => {
+      if (fail) { fail = false; throw Error("simulated cache failure"); }
+      return table.put(...args);
+    } } : table;
+  };
+  await assert.rejects(f.index.upsert(f.workspace, { path: file, source: "snapshot", sessionId: "s1", turn: 1 }), /cache failure/);
+  assert.equal(f.tables.get("artifacts").size, 0);
+  assert.equal(f.tables.get("provenance").size, 1);
+  const restarted = new ArtifactIndex(f.services);
+  await restarted.init(f.domain);
+  assert.equal([...restarted.records.values()][0].name, "interrupted.md");
+});
+
+test("a turn checkpoint survives restart before turn end without indexing unrelated startup files", async () => {
+  const f = await fixture();
+  await f.index.handleEvent({ header: f.header }, { type: "turn/start", turn: 7, time: Date.now() });
+  await writeFile(path.join(f.root, "before-crash.md"), "shell");
+  const restarted = new ArtifactIndex(f.services);
+  await restarted.init(f.domain);
+  assert.equal(restarted.records.size, 0);
+  assert.equal(restarted.activeTurns.size, 1);
+  await restarted.handleEvent({ header: f.header }, { type: "turn/end", turn: 7, time: Date.now() });
+  assert.equal([...restarted.records.values()][0].name, "before-crash.md");
+  assert.equal(restarted.activeTurns.size, 0);
+  assert.equal(f.tables.get("active_turns").size, 0);
+});
+
+test("restart replays a committed turn end and excludes post-turn filesystem changes", async () => {
+  const f = await fixture(), endTime = Date.now();
+  await f.index.handleEvent({ header: f.header }, { type: "turn/start", turn: 8, time: endTime - 2000 });
+  const output = path.join(f.root, "committed.md"), unrelated = path.join(f.root, "after-end.md");
+  await writeFile(output, "output");
+  await utimes(output, new Date(endTime - 1000), new Date(endTime - 1000));
+  await writeFile(unrelated, "after turn");
+  await utimes(unrelated, new Date(endTime + 1000), new Date(endTime + 1000));
+  f.events.push({ type: "turn/end", seq: 2, time: endTime, data: { turn: 8 } });
+  const restarted = new ArtifactIndex(f.services);
+  await restarted.init(f.domain);
+  assert.deepEqual([...restarted.records.values()].map(r => r.name), ["committed.md"]);
+  assert.equal(f.tables.get("active_turns").size, 0);
+});
+
+test("cleaned snapshot provenance stays hidden across restart and restores with metadata", async () => {
+  const f = await fixture(), file = path.join(f.root, "hidden.md");
+  await writeFile(file, "restore");
+  await f.index.handleEvent({ header: f.header }, { type: "turn/end", turn: 1, time: Date.now() });
+  const record = [...f.index.records.values()][0];
+  await f.index.patch(record.id, { tags: ["Archive"], note: "Keep note", starred: true });
+  await rename(file, file + ".away");
+  await f.index.validate();
+  await f.index.cleanMissing();
+  const restarted = new ArtifactIndex(f.services);
+  await restarted.init(f.domain);
+  assert.equal(restarted.records.size, 0);
+  await rename(file + ".away", file);
+  await restarted.validate();
+  const restored = restarted.records.get(record.id);
+  assert.equal(restored.missing, false);
+  assert.equal(restored.starred, true);
+  assert.equal(restored.note, "Keep note");
+  assert.deepEqual(restored.tags, ["Archive"]);
+});
+
+test("v1 records are adopted into provenance without losing annotations", async () => {
+  const f = await fixture(), file = path.join(f.root, "legacy.md");
+  await writeFile(file, "legacy");
+  const record = await f.index.upsert(f.workspace, { path: file, source: "write", sessionId: "s1", turn: 1 });
+  await f.index.patch(record.id, { note: "v1 note" });
+  f.tables.get("provenance").clear();
+  const restarted = new ArtifactIndex(f.services);
+  await restarted.init(f.domain);
+  assert.equal(f.tables.get("provenance").get(record.id).record.note, "v1 note");
+  assert.equal(restarted.records.get(record.id).note, "v1 note");
+});
+
 test("extension configuration accepts leading dots and uppercase", async () => {
   const f = await fixture();
   const index = new ArtifactIndex(f.services, { readableExtensions: [".MD", "md", ".JSON"] });

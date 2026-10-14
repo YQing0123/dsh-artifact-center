@@ -37,35 +37,36 @@ export const Config = Schema.object({
     }),
   ).default(DEFAULTS.autoTags),
 });
+const artifactSchema = z.object({
+  id: z.string(), path: z.string(), workspaceId: z.string(), name: z.string(),
+  source: z.enum(["present", "write", "edit", "snapshot", "manual"]),
+  lastSeenAt: z.number(),
+}).passthrough();
+const snapshotSchema = z.object({
+  entries: z.record(z.string(), z.tuple([z.number(), z.number()])),
+  takenAt: z.number(), truncated: z.boolean(), warnings: z.array(z.string()),
+});
 export const domainSpec = {
   name: "artifact_center",
-  version: 1,
+  version: 2,
+  compatibleVersions: [1],
   layout: "per-record",
   invalidRecords: "backup-and-skip",
   tables: {
-    artifacts: {
-      valueSchema: z
-        .object({
-          id: z.string(),
-          path: z.string(),
-          workspaceId: z.string(),
-          name: z.string(),
-          source: z.enum(["present", "write", "edit", "snapshot", "manual"]),
-          lastSeenAt: z.number(),
-        })
-        .passthrough(),
+    artifacts: { valueSchema: artifactSchema },
+    provenance: {
+      valueSchema: z.object({ record: artifactSchema, hidden: z.boolean().default(false) }),
+    },
+    active_turns: {
+      valueSchema: z.object({
+        workspaceId: z.string(), sessionId: z.string(), cwd: z.string(),
+        turn: z.number(), baseline: snapshotSchema,
+      }),
     },
     cursors: {
       valueSchema: z.object({ seq: z.number(), updatedAt: z.number() }),
     },
-    snapshots: {
-      valueSchema: z.object({
-        entries: z.record(z.string(), z.tuple([z.number(), z.number()])),
-        takenAt: z.number(),
-        truncated: z.boolean(),
-        warnings: z.array(z.string()),
-      }),
-    },
+    snapshots: { valueSchema: snapshotSchema },
   },
 };
 const cleanJSON = (value) => JSON.parse(JSON.stringify(value));

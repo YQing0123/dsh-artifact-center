@@ -208,6 +208,8 @@ export class ArtifactIndex {
     this.recordRevision = 0;
     this.cursors = new Map();
     this.snapshots = new Map();
+    this.provenance = new Map();
+    this.activeTurns = new Map();
     this.workspaces = [];
     this.queue = Promise.resolve();
     this.disposed = false;
@@ -241,6 +243,27 @@ export class ArtifactIndex {
         this.cursors.set(id, record);
       for (const [id, record] of domain.table("snapshots").entries())
         this.snapshots.set(id, record);
+      for (const [id, value] of domain.table("provenance").entries())
+        this.provenance.set(id, value);
+      for (const [id, checkpoint] of domain.table("active_turns").entries())
+        this.activeTurns.set(id, checkpoint);
+      // Adopt v1 records once. Provenance is authoritative after a partial cache write.
+      for (const [id, record] of this.records) {
+        if (!this.provenance.has(id)) {
+          const value = { record, hidden: false };
+          await domain.table("provenance").put(id, value);
+          this.provenance.set(id, value);
+        }
+      }
+      for (const [id, value] of this.provenance) {
+        if (value.hidden) {
+          this.records.delete(id);
+          await domain.table("artifacts").delete(id);
+        } else {
+          this.records.set(id, value.record);
+          await domain.table("artifacts").put(id, value.record);
+        }
+      }
       this.status.persistent = true;
     }
     await this.refreshWorkspaces();
@@ -254,8 +277,23 @@ export class ArtifactIndex {
         this.warn(e);
       }
     }
+    await this.recoverCompletedTurns();
     await this.validate();
-    this.status.phase = "ready";
+    this.status.phase = this.status.errors.length ? "degraded" : "ready";
+  }
+  async recoverCompletedTurns() {
+    const query = this.services.sessionQuery;
+    if (!query?.readSession) return;
+    for (const checkpoint of [...this.activeTurns.values()]) {
+      try {
+        const replay = await query.readSession(checkpoint.sessionId);
+        const end = replay.events?.find((event) =>
+          event.type === "turn/end" && (event.data?.turn ?? event.turn) === checkpoint.turn);
+        if (end) await this.handleEvent({ header: replay.session }, end, { recovering: true });
+      } catch (e) {
+        this.warn(e);
+      }
+    }
   }
   async refreshWorkspaces() {
     const listed = (await this.services.workspaceRegistry?.list()) ?? [];
@@ -276,8 +314,13 @@ export class ArtifactIndex {
     }
   }
   async save(table, id, record) {
+    if (table === "artifacts") {
+      const value = { record: structuredClone(record), hidden: false };
+      if (this.domain) await this.domain.table("provenance").put(id, value);
+      this.provenance.set(id, value);
+    }
     if (this.domain) await this.domain.table(table).put(id, record);
-    if(table==='artifacts')this.recordRevision++;
+    if (table === "artifacts") this.recordRevision++;
   }
   async workspaceFor(header) {
     const canonical = await realpath(header.cwd).catch(() => null);
@@ -301,7 +344,7 @@ export class ArtifactIndex {
       return;
     }
     const id = idOf(w.id, file),
-      old = this.records.get(id);
+      old = this.records.get(id) ?? this.provenance.get(id)?.record;
     if (!old && this.records.size >= this.config.maxIndexedFiles) {
       this.status.warnings = ["Index limit reached"];
       return;
@@ -375,6 +418,7 @@ export class ArtifactIndex {
     this.status.phase = "backfill";
     this.status.processed = 0;
     await this.refreshWorkspaces();
+    await this.recoverCompletedTurns();
     const sessions = await query.listSessions();
     this.status.total = sessions.length;
     const titles = await query
@@ -447,13 +491,22 @@ export class ArtifactIndex {
       this.records.set(id, updated);
     }
   }
-  async handleEvent(session, envelope) {
+  async handleEvent(session, envelope, { recovering = false } = {}) {
     const event = { ...envelope, ...envelope.data };
     const header = session.header;
     if (!header?.cwd) return;
     await this.refreshWorkspaces();
     const w = await this.workspaceFor(header);
     if (!w) return;
+    const checkpointId = idOf(w.id, `turn:${header.id}:${event.turn}`);
+    if (event.type === "turn/start" && this.config.snapshotOnTurnEnd) {
+      const checkpoint = {
+        workspaceId: w.id, sessionId: header.id, cwd: w.path, turn: event.turn,
+        baseline: await snapshot(w.path, this.config),
+      };
+      await this.save("active_turns", checkpointId, checkpoint);
+      this.activeTurns.set(checkpointId, checkpoint);
+    }
     if(this.config.snapshotOnTurnEnd&&!this.snapshots.has(w.id)&&event.type!=="turn/end") {
       const baseline=await snapshot(w.path,this.config);
       this.snapshots.set(w.id,baseline);
@@ -473,10 +526,14 @@ export class ArtifactIndex {
         sessionTitle: title,
       });
     if (event.type === "turn/end" && this.config.snapshotOnTurnEnd) {
-      const after = await snapshot(w.path, this.config),
-        before = this.snapshots.get(w.id);
+      const after = await snapshot(w.path, this.config);
+      const checkpoint = this.activeTurns.get(checkpointId);
+      const before = checkpoint?.workspaceId === w.id && checkpoint.cwd === w.path
+        ? checkpoint.baseline : this.snapshots.get(w.id);
       if (before) {
-        const files = changedFiles(before, after);
+        const endTime = typeof event.time === "number" ? event.time : Date.parse(event.time);
+        const files = changedFiles(before, after).filter((file) =>
+          !recovering || (Number.isFinite(endTime) && after.entries[file][0] <= endTime));
         if (files.length > this.config.burstThreshold) {
           const id = idOf(w.id, `burst:${header.id}:${event.turn}`);
           const distributions = {};
@@ -522,6 +579,10 @@ export class ArtifactIndex {
       }
       this.snapshots.set(w.id, after);
       await this.save("snapshots", w.id, after);
+      if (checkpoint) {
+        if (this.domain) await this.domain.table("active_turns").delete(checkpointId);
+        this.activeTurns.delete(checkpointId);
+      }
       this.status.snapshots++;
       if (after.truncated || after.warnings.length)
         this.status.warnings = [
@@ -532,6 +593,18 @@ export class ArtifactIndex {
   }
   async validate() {
     await this.refreshWorkspaces();
+    for (const [id, value] of this.provenance) {
+      if (!value.hidden || this.records.has(id) || this.records.size >= this.config.maxIndexedFiles) continue;
+      const record = value.record;
+      try {
+        await authorizedPath(record.path, this.workspaces
+          .filter((w) => w.id === record.workspaceId).map((w) => w.path));
+      } catch {
+        continue;
+      }
+      await this.save("artifacts", id, record);
+      this.records.set(id, record);
+    }
     for (const [id, r] of this.records) {
       if (r.burst) continue;
       let info;
@@ -598,6 +671,9 @@ export class ArtifactIndex {
       if (r.missing && !r.trashed) {
         for (const v of r.versions ?? []) if (v.sessionId) sessions.add(v.sessionId);
         if (r.sessionId) sessions.add(r.sessionId);
+        const value = { record: structuredClone(r), hidden: true };
+        if (this.domain) await this.domain.table("provenance").put(id, value);
+        this.provenance.set(id, value);
         if (this.domain) await this.domain.table("artifacts").delete(id);
         this.records.delete(id);
         this.recordRevision++;
