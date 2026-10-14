@@ -48,6 +48,18 @@ The plugin ID is `artifact-center`. Override settings in the profile's `cordis.p
         previewMaxBytes: 20971520
         textMaxBytes: 1048576
         validationIntervalMs: 300000
+        readableExtensions:
+          - md
+          - txt
+          - json
+          - yaml
+          - yml
+          - csv
+          - js
+          - ts
+          - png
+          - jpg
+          - pdf
         autoTags:
           - name: Deliverable
             kind: glob
@@ -57,7 +69,7 @@ The plugin ID is `artifact-center`. Override settings in the profile's `cordis.p
             value: xlsx
 ```
 
-Automatic tag rules accept `glob`, `ext` and `session` (conversation-title substring). Default ignored directories: `.git`, `node_modules`, `dist`, `build`, `.next`, `__pycache__`, `.venv`, `target`, `.cache`, `.dsh`. `ignorePatterns` replaces the default list when explicitly supplied. State is held through the Host's `storageDomain` API under `artifact_center`.
+Automatic tag rules accept `glob`, `ext` and `session` (conversation-title substring). `readableExtensions` is a whitelist of extensions without the leading dot; the Artifact Center navigation shows the active list under “Readable formats”. An empty list uses all built-in supported formats. Files outside this whitelist are not indexed or content-read. Default ignored directories: `.git`, `node_modules`, `dist`, `build`, `.next`, `__pycache__`, `.venv`, `target`, `.cache`, `.dsh`. `ignorePatterns` replaces the default list when explicitly supplied. State is held through the Host's `storageDomain` API under `artifact_center`.
 
 HTTP routes under `/artifact-center/*` require the Host's browser authentication and same-origin request guard. Only indexed files inside their registered workspace can be read or opened; outside symlinks are rejected. HTML previews cannot execute scripts or access the network. Text search reads at most `textMaxBytes` per candidate; it is not a semantic or binary-document search engine.
 

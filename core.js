@@ -27,6 +27,7 @@ export const DEFAULTS = {
   validationIntervalMs: 300000,
   trustedHosts: [],
   autoTags: [{ name: "交付物", kind: "glob", value: "outputs/**" }],
+  readableExtensions: [],
 };
 const KINDS = {
   doc: ["pdf", "doc", "docx", "md", "txt", "rtf", "odt"],
@@ -54,6 +55,7 @@ const KINDS = {
   media: ["mp4", "webm", "mov", "mp3", "wav", "ogg", "flac", "m4a"],
   archive: ["zip", "tar", "gz", "7z", "rar"],
 };
+export const READABLE_EXTENSIONS = Object.values(KINDS).flat();
 export const kindOf = (file) =>
   Object.entries(KINDS).find(([, exts]) =>
     exts.includes(path.extname(file).slice(1).toLowerCase()),
@@ -194,7 +196,14 @@ const yieldTask = () => new Promise((resolve) => setImmediate(resolve));
 export class ArtifactIndex {
   constructor(services, config = {}) {
     this.services = services;
-    this.config = { ...DEFAULTS, ...config };
+    this.config = {
+      ...DEFAULTS,
+      ...config,
+      readableExtensions:
+        config.readableExtensions?.length
+          ? [...new Set(config.readableExtensions.map((x) => String(x).replace(/^\\./, "").toLowerCase()))]
+          : READABLE_EXTENSIONS,
+    };
     this.records = new Map();
     this.recordRevision = 0;
     this.cursors = new Map();
@@ -278,8 +287,13 @@ export class ArtifactIndex {
   }
   async upsert(w, input) {
     const file = path.resolve(input.path),
+      ext = path.extname(file).slice(1).toLowerCase(),
       rel = path.relative(w.path, file).replaceAll(path.sep, "/");
-    if (!within(w.path, file) || ignored(rel, this.config.ignorePatterns))
+    if (
+      (!input.burst && !this.config.readableExtensions.includes(ext)) ||
+      !within(w.path, file) ||
+      ignored(rel, this.config.ignorePatterns)
+    )
       return;
     try {
       await authorizedPath(file, [w.path], { allowMissing: true });

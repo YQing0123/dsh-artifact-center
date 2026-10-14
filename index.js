@@ -4,7 +4,7 @@ import { stat, open } from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { z } from "zod";
 import Schema from "@deepseek-ai/schemastery";
-import { ArtifactIndex, DEFAULTS } from "./core.js";
+import { ArtifactIndex, DEFAULTS, READABLE_EXTENSIONS } from "./core.js";
 import {
   trustedRequest,
   authorizedPath,
@@ -28,6 +28,7 @@ export const Config = Schema.object({
   enableBetterSidebar: Schema.boolean().default(false),
   validationIntervalMs: Schema.number().min(10000).default(300000),
   trustedHosts: Schema.array(Schema.string()).default([]),
+  readableExtensions: Schema.array(Schema.string()).default(READABLE_EXTENSIONS),
   autoTags: Schema.array(
     Schema.object({
       name: Schema.string(),

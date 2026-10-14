@@ -42,7 +42,7 @@ dsh plugin --profile web add github:YQing0123/dsh-artifact-center
 
 ## 配置
 
-插件 ID 是 `artifact-center`。可在 profile 的 `cordis.patch.yml` 覆盖 `ignorePatterns`、`burstThreshold`、`maxIndexedFiles`、`previewMaxBytes`、`textMaxBytes`、`backfillOnStart`、`snapshotOnTurnEnd`、`validationIntervalMs` 和 `autoTags`。自动标签支持 `glob`（相对路径模式）、`ext`（扩展名）和 `session`（对话标题关键词）。示例见 [English README](README.md#configuration)。
+插件 ID 是 `artifact-center`。可在 profile 的 `cordis.patch.yml` 覆盖 `ignorePatterns`、`burstThreshold`、`maxIndexedFiles`、`previewMaxBytes`、`textMaxBytes`、`backfillOnStart`、`snapshotOnTurnEnd`、`validationIntervalMs`、`readableExtensions` 和 `autoTags`。`readableExtensions` 是不带点号的扩展名白名单，面板左侧“可读取格式”会展示当前配置；空数组使用内置支持的全部格式。白名单之外的文件不会入索引，也不会参与内容检索。自动标签支持 `glob`（相对路径模式）、`ext`（扩展名）和 `session`（对话标题关键词）。示例见 [English README](README.md#configuration)。
 
 ## Agent 搜索
 

@@ -77,16 +77,42 @@ async function fixture() {
     tables,
   };
 }
-test('record revision changes when same-count metadata changes',async()=>{
-  const f=await fixture(),w=f.index.workspaces[0];
-  const file=path.join(f.root,'revision.md');await writeFile(file,'first');
-  const r=await f.index.upsert(w,{path:file,source:'write',sessionId:'s1',sessionTitle:'Old title',turn:1,time:1});
-  const before=f.index.state();await f.index.updateTitle('s1','New title');
-  assert.equal(f.index.state().count,before.count);assert.ok(f.index.state().recordRevision>before.recordRevision);
-  const edited=f.index.state().recordRevision;await f.index.patch(r.id,{tags:['A','B']});
-  assert.ok(f.index.state().recordRevision>edited);assert.deepEqual(f.index.state().counts.tags,{A:1,B:1});
+test("readable extension whitelist excludes unsupported indexed files", async () => {
+  const f = await fixture();
+  f.index.config.readableExtensions = ["md"];
+  const w = f.index.workspaces[0];
+  const md = path.join(f.root, "allowed.md");
+  const png = path.join(f.root, "blocked.png");
+  await writeFile(md, "allowed");
+  await writeFile(png, "blocked");
+  await f.index.upsert(w, { path: md, source: "write", sessionId: "s1" });
+  await f.index.upsert(w, { path: png, source: "write", sessionId: "s1" });
+  assert.deepEqual([...f.index.records.values()].map((r) => r.name), ["allowed.md"]);
 });
-test('canonical workspace aliases retain relative and absolute provenance',async()=>{
+
+test("record revision changes when same-count metadata changes", async () => {
+  const f = await fixture(), w = f.index.workspaces[0];
+  const file = path.join(f.root, "revision.md");
+  await writeFile(file, "first");
+  const r = await f.index.upsert(w, {
+    path: file,
+    source: "write",
+    sessionId: "s1",
+    sessionTitle: "Old title",
+    turn: 1,
+    time: 1,
+  });
+  const before = f.index.state();
+  await f.index.updateTitle("s1", "New title");
+  assert.equal(f.index.state().count, before.count);
+  assert.ok(f.index.state().recordRevision > before.recordRevision);
+  const edited = f.index.state().recordRevision;
+  await f.index.patch(r.id, { tags: ["A", "B"] });
+  assert.ok(f.index.state().recordRevision > edited);
+  assert.deepEqual(f.index.state().counts.tags, { A: 1, B: 1 });
+});
+
+  test('canonical workspace aliases retain relative and absolute provenance',async()=>{
   const f=await fixture(),alias=f.root+'-alias';await symlink(f.root,alias,'dir');f.header.cwd=alias;
   await writeFile(path.join(f.root,'alias.md'),'Alias output');
   f.events.push({type:'tool/call',seq:1,time:100,data:{name:'write',turn:1,arguments:{file_path:'alias.md'}}},{type:'deliverables/presented',seq:2,time:101,data:{turn:1,files:[{path:path.join(alias,'alias.md')}]}});
