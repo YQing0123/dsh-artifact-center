@@ -29,6 +29,7 @@
     "test": "node --test test/*.test.js",
     "test:ui": "node scripts/ui-regression.mjs",
     "test:locale": "node scripts/locale-regression.mjs",
+    "test:native-trash": "node scripts/native-trash-acceptance.mjs",
     "release:check": "node scripts/release-check.mjs",
     "prepack": "npm run check && npm test"
   },

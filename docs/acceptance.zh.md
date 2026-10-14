@@ -48,6 +48,8 @@ GitHub 仓库已有 `artifact`、`deepseek-harness`、`dsh-plugin` topic。
 - 预览覆盖Markdown+Mermaid、独立Mermaid、CSV的引号/逗号/多行单元格、Unicode TSV、JSON代码、SVG图片尺寸、HTML沙箱及脚本不执行、DOCX原生应用提示、有效WAV元数据、有效PDF响应与iframe。PDF只验证文件响应和原生预览框，不宣称逐页视觉或打印验收；媒体当前只验证WAV，不宣称全部编码格式。
 - 万条模拟记录仅渲染20个行节点，切换排序至列表更新的一次本机测量为325ms，滚动到底可访问最后一条。该测量包含模拟JSON与UI更新，不代表真实磁盘回填吞吐或跨设备基准。
 - `npm run test:locale`在真实设置页切换英文，确认侧栏标题、扩展名复选与预览工具栏均切换，3/3通过；结束时恢复原语言。浏览器脚本会检查CLI返回的报告，避免CLI错误被零退出码掩盖。
+- `npm run test:native-trash`在提升系统权限后，使用唯一新建的随机文件完成真实Finder回收站往返：源文件消失、索引仍可按trashed检索、Finder恢复内容字节一致、validate清除missing/trashed并保留标签/收藏/备注，4/4通过。首次普通工作区权限运行因Finder TCC返回-10004，未把该次失败误报为产品失败。
+- Host `Tool.listTools`当前目录可见`artifact_search`注册链路由插件代码接入；本轮未伪造真实LLM调度调用，插件单元测试覆盖工具执行与结构化内容命中。
 
 ## 搜索工作区访问撤销与候选包检查
 
