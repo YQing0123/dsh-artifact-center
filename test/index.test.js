@@ -543,6 +543,44 @@ test("agent search returns canonical metadata and bounded content matches", asyn
     0,
   );
 });
+test("search immediately revokes removed workspaces without losing provenance", async () => {
+  const f = await fixture(), file = path.join(f.root, "answer.txt");
+  await writeFile(file, "private content needle");
+  await f.index.upsert(f.workspace, { path: file, source: "write", sessionId: "s1" });
+  const record = [...f.index.records.values()][0];
+  await f.index.patch(record.id, { tags: ["Keep"], note: "Preserved" });
+  const tool = searchTool(f.index), exec = { signal: new AbortController().signal };
+  assert.equal((await tool.execute({ query: "needle" }, exec)).total, 1);
+  let reads = 0;
+  const text = f.index.text.bind(f.index);
+  f.index.text = async r => { reads++; return text(r); };
+  f.services.workspaceRegistry.list = () => [];
+  assert.equal((await tool.execute({ query: "answer" }, exec)).total, 0);
+  assert.equal((await tool.execute({ query: "needle" }, exec)).total, 0);
+  assert.equal(reads, 0, "removed workspace must not be content-read");
+  assert.equal(f.index.provenance.get(record.id).record.note, "Preserved");
+  f.services.workspaceRegistry.list = () => [f.workspace];
+  assert.deepEqual((await tool.execute({ query: "answer" }, exec)).records[0].tags, ["Keep"]);
+});
+test("repointing a registered workspace does not expose paths under its old root", async () => {
+  const f = await fixture(), file = path.join(f.root, "old.txt"), replacement = path.join(f.root, "replacement");
+  await writeFile(file, "old root needle"); await mkdir(replacement);
+  await f.index.upsert(f.workspace, { path: file, source: "write", sessionId: "s1" });
+  f.services.workspaceRegistry.list = () => [{ id: "w1", title: "Moved", path: replacement, sessionIds: ["s1"] }];
+  assert.equal((await f.index.search({ query: "old" })).total, 0);
+  assert.equal((await searchTool(f.index).execute({ query: "needle" }, { signal: new AbortController().signal })).total, 0);
+});
+test("concurrent workspace refresh publishes a complete snapshot instead of combining snapshots", async () => {
+  const f = await fixture(); let call = 0;
+  f.services.workspaceRegistry.list = () => {
+    const revision = ++call;
+    return ["a", "b"].map(suffix => ({ id: `w${revision}${suffix}`, title: "Concurrent", path: f.root, sessionIds: [] }));
+  };
+  await Promise.all([f.index.refreshWorkspaces(), f.index.refreshWorkspaces()]);
+  assert.equal(f.index.workspaces.length, 2);
+  assert.equal(new Set(f.index.workspaces.map(w => w.id.slice(0, 2))).size, 1);
+});
+
 test("host routes require auth, serve real byte ranges with CSP and enforce explicit trash confirmation", async (t) => {
   const f = await fixture(),
     file = path.join(f.root, "sample.pdf");

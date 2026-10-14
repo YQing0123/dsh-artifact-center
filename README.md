@@ -83,6 +83,8 @@ Host and UI are plain JavaScript. Only the lazy Mermaid renderer is independentl
 
 With the isolated development Host and authenticated `artifact-p0` browser running, `npm run test:ui` checks fixture-only previews, tag errors and a 10,000-record virtual list. API writes are intercepted and never reach real storage or system actions. `npm run test:locale` checks the English UI and restores the original language preference.
 
+Search refreshes the current registered workspace boundaries before reading content. Removed workspaces and paths outside a workspace's changed root are excluded without deleting their recorded provenance. After committing the release source, pack into `.cache` and run `npm run release:check` to compare the archive with both the working files and Git HEAD and generate a local integrity receipt. This command does not publish or authenticate.
+
 ```sh
 npm ci --legacy-peer-deps
 npm run build:vendor

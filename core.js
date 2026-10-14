@@ -297,10 +297,10 @@ export class ArtifactIndex {
   }
   async refreshWorkspaces() {
     const listed = (await this.services.workspaceRegistry?.list()) ?? [];
-    this.workspaces = [];
+    const workspaces = [];
     for (const w of listed) {
       try {
-        this.workspaces.push({
+        workspaces.push({
           id: w.id,
           title: w.title,
           path: await realpath(w.path),
@@ -312,6 +312,7 @@ export class ArtifactIndex {
         this.warn(`Workspace ${w.title}: ${e.message}`);
       }
     }
+    this.workspaces = workspaces;
   }
   async save(table, id, record) {
     if (table === "artifacts") {
@@ -711,6 +712,8 @@ export class ArtifactIndex {
     }
   }
   async search(filter = {}) {
+    await this.refreshWorkspaces();
+    const activeWorkspaces = new Map(this.workspaces.map(w => [w.id, w]));
     const q = String(filter.query ?? "").toLocaleLowerCase();
     const tags = Array.isArray(filter.tag)
       ? filter.tag
@@ -719,6 +722,8 @@ export class ArtifactIndex {
         : [];
     let rows = [...this.records.values()].filter(
       (r) =>
+        activeWorkspaces.has(r.workspaceId) &&
+        within(activeWorkspaces.get(r.workspaceId).path, r.path) &&
         (!filter.workspace ||
           [r.workspaceId, r.workspaceTitle].includes(filter.workspace)) &&
         (!filter.type || r.kind === filter.type || r.ext === filter.type) &&
