@@ -31,6 +31,7 @@
     "test:locale": "node scripts/locale-regression.mjs",
     "test:native-trash": "node scripts/native-trash-acceptance.mjs",
     "release:check": "node scripts/release-check.mjs",
+    "release:verify-published": "node scripts/verify-published.mjs",
     "prepack": "npm run check && npm test"
   },
   "repository": {

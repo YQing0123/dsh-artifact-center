@@ -31,6 +31,8 @@ npm publish .cache/dsh-artifact-center-0.1.2.tgz --access public --registry=http
 npm view dsh-artifact-center@0.1.2 version dist.integrity dist.shasum --registry=https://registry.npmjs.org
 ```
 
+也可运行`npm run release:verify-published`，它先重新核对当前候选包与Git提交，再从官方registry查询精确版本并比较SHA-512和SHA-1；不读取npm凭据或执行发布。退出0表示已发布且完整性匹配，退出2表示该版本尚未发布，退出1表示校验、网络或完整性错误。网络错误不得解释为未发布。
+
 将返回的integrity和shasum与本地收据的integrity/SHA-1匹配，才可记录该候选包确已发布。版本已占用且完整性不同则停止调查，不能覆盖同名版本。
 
 ## 用户profile安装与验证
