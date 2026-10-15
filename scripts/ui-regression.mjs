@@ -10,10 +10,11 @@ export async function browserRegression(page) {
   const types = [["md","doc"],["csv","data"],["tsv","data"],["svg","image"],["html","web"],["docx","doc"],["wav","media"],["pdf","doc"],["json","data"],["mmd","code"]];
   let records = types.map(([ext, kind], i) => ({
     id: (i + 1).toString(16).padStart(32, "0"), name: `fixture.${ext}`, path: `/ui-regression/fixture.${ext}`,
-    relPath: `fixture.${ext}`, ext: `.${ext}`, kind, workspaceId: "ui-regression", workspaceTitle: "UI regression",
+    relPath: `fixture.${ext}`, ext: `.${ext}`, kind, workspaceId: "ui-regression", workspaceTitle: 'UI regression, "quoted"',
     source: "present", size: 200, mtime: stamp, lastSeenAt: stamp,
     tags: i ? ["shared"] : ["seed"], note: i ? "" : "saved note",
-    versions: [{ time: stamp, source: "present", size: 200 }],
+    versions: i ? [{ time: stamp, source: "present", size: 200 }] : [{ time: stamp-300000, source: "write", size: 100, sessionId: "ui-regression-earlier", sessionTitle: "Earlier fixture conversation" },
+      { time: stamp, source: "present", size: 200, sessionTitle: "Newest fixture conversation" }],
   }));
   const texts = { ".md": "# Fixture heading\n\n```mermaid\ngraph TD; A-->B;\n```\n\n<script>window.__artifactTestXSS=true</script>",
     ".csv": 'name,value\r\n"hello, world","line one\nline two"\r\n"quote ""inside""",42',
@@ -66,7 +67,7 @@ export async function browserRegression(page) {
   };
   const toolbar = () => page.locator(".ac-preview-tools");
   const close = () => toolbar().getByRole("button",{name:/^(关闭|Close)$/}).click();
-  const open = ext => page.locator(".ac-row .ac-fileinfo").getByRole("button",{name:`fixture.${ext}`,exact:true}).click();
+  const open = ext => page.locator(`.ac-row .ac-fileinfo button[title="/ui-regression/fixture.${ext}"]`).click();
   try {
     await page.route(pattern,handler); await page.evaluate(key=>localStorage.removeItem(key),key);
     await page.setViewportSize({width:1400,height:1000}); await page.reload();
@@ -74,6 +75,16 @@ export async function browserRegression(page) {
     await page.getByRole("button",{name:/^(全选|Select all)$/}).click();
     await page.locator(".ac-row").first().waitFor({state:"visible"});
     check("single readable-formats section",await page.getByText(/^(可读取格式|Readable formats)$/).count()===1);
+    await page.setViewportSize({width:1100,height:560});
+    const nav=page.locator(".ac-nav");
+    await nav.evaluate(el=>{el.querySelectorAll("details").forEach(d=>d.open=true);el.scrollTop=0;});
+    await nav.hover(); await page.mouse.wheel(0,1800);
+    await page.waitForFunction(()=>document.querySelector(".ac-nav")?.scrollTop>0);
+    check("expanded sidebar scrolls with wheel",await nav.evaluate(el=>el.scrollHeight>el.clientHeight&&el.scrollTop>0));
+    await nav.evaluate(el=>el.scrollTop=0); await nav.focus(); await page.keyboard.press("End");
+    await page.waitForFunction(()=>document.querySelector(".ac-nav")?.scrollTop>0);
+    check("sidebar supports keyboard scrolling",await nav.getAttribute("tabindex")==="0");
+    await page.setViewportSize({width:1400,height:1000});
     await open("md"); await page.locator(".ac-rendered-document h1").waitFor({state:"visible"});
     await page.locator(".ac-rendered-document svg").waitFor({state:"visible"});
     check("Markdown and Mermaid render",await page.locator(".ac-rendered-document h1").innerText()==="Fixture heading");
@@ -98,6 +109,26 @@ export async function browserRegression(page) {
     await page.waitForFunction(()=>[...document.querySelectorAll(".ac-info-tags")].some(n=>n.textContent.includes("alpha")));
     check("tags deduplicated on retry",savedTags.join(",")==="seed,alpha"&&attempts===2);
     check("tag save preserves unsaved note",await note.inputValue()==="Unsaved note draft");
+    const toast=page.locator(".ac-toast");
+    check("success feedback is floating toast",await toast.evaluate(el=>getComputedStyle(el).position==="absolute")&&await toast.getAttribute("role")==="status");
+    await page.mouse.move(0,0); await toast.waitFor({state:"hidden",timeout:7000});
+    check("success toast dismisses automatically",await toast.count()===0);
+    await page.locator(".ac-file-menu > summary").click(); await page.keyboard.press("Escape");
+    check("Escape closes menu and restores focus",await page.locator(".ac-file-menu").getAttribute("open")===null&&await page.locator(".ac-file-menu > summary").evaluate(el=>document.activeElement===el));
+    await close(); await open("md");
+    check("reopening preview preserves note draft",await note.inputValue()==="Unsaved note draft"&&await page.locator(".ac-draft-hint").isVisible());
+    await toolbar().getByRole("button",{name:/^(收藏|Favorite)$/}).click();
+    await toolbar().getByRole("button",{name:/^(取消收藏|Unfavorite)$/}).waitFor({state:"visible"});
+    check("favorite updates pressed state",await toolbar().getByRole("button",{name:/^(取消收藏|Unfavorite)$/}).getAttribute("aria-pressed")==="true"&&records[0].starred===true);
+    await toolbar().getByRole("button",{name:/^(取消收藏|Unfavorite)$/}).click();
+    await toolbar().getByRole("button",{name:/^(收藏|Favorite)$/}).waitFor({state:"visible"});
+    check("unfavorite preserves unsaved note",records[0].starred===false&&await note.inputValue()==="Unsaved note draft");
+    const saveNote=page.locator(".ac-previewmeta").getByRole("button",{name:/^(保存|Save)$/});
+    await saveNote.click(); await page.waitForFunction(()=>document.querySelector(".ac-previewmeta textarea")?.value==="Unsaved note draft"&&[...document.querySelectorAll(".ac-previewmeta button")].some(b=>/^(保存|Save)$/.test(b.textContent)&&b.disabled));
+    check("note saves and becomes clean",records[0].note==="Unsaved note draft"&&await saveNote.isDisabled());
+    const history=page.locator(".ac-timeline li");
+    check("history is newest first",await history.count()===2&&(await history.first().innerText()).includes("Newest fixture conversation"));
+    check("history navigation respects missing session",await history.first().getByRole("button").isDisabled()&&await history.last().getByRole("button").isEnabled());
     await toolbar().getByRole("button",{name:/^(分栏预览|Split preview)$/}).click();
     check("split restores list",await page.locator(".ac-main").isVisible());
     await toolbar().getByRole("button",{name:/^(展开预览|Expand preview)$/}).click();
@@ -105,6 +136,34 @@ export async function browserRegression(page) {
     await page.setViewportSize({width:760,height:900}); const narrow=await page.locator(".ac-previewbody").boundingBox();
     check("narrow preview fits",narrow.width>250&&narrow.x+narrow.width<=761);
     await page.setViewportSize({width:1400,height:1000}); await close();
+    await page.locator(".ac-format-filter").getByRole("button",{name:/^(清空|Clear selection)$/}).click();
+    await page.getByRole("checkbox",{name:/^(显示|Show) \.md$/}).check();
+    await page.waitForFunction(()=>document.querySelectorAll(".ac-row").length===1);
+    check("readable format selection filters list",await page.getByRole("button",{name:/^fixture\.md/}).count()===1);
+    await page.reload(); await page.getByRole("button",{name:/^(产物中心|Artifact center)$/}).click();
+    await page.getByRole("button",{name:/^fixture\.md/}).waitFor({state:"visible"});
+    check("format selection survives reload",await page.locator(".ac-row").count()===1&&await page.getByRole("checkbox",{name:/^(显示|Show) \.md$/}).isChecked());
+    await page.evaluate(()=>{
+      window.__artifactDownloads=[];
+      const create=URL.createObjectURL,click=HTMLAnchorElement.prototype.click;
+      URL.createObjectURL=function(blob){
+        if(["text/csv;charset=utf-8","text/markdown;charset=utf-8"].includes(blob.type))
+          Promise.all([blob.text(),blob.arrayBuffer()]).then(([text,buffer])=>window.__artifactDownloads.push({text,mime:blob.type,bom:[...new Uint8Array(buffer).slice(0,3)]}));
+        return create.call(URL,blob);
+      };
+      HTMLAnchorElement.prototype.click=function(){ if(!this.download) return click.call(this); };
+    });
+    const exporter=page.getByRole("combobox",{name:/^(导出清单|Export list)$/});
+    await exporter.selectOption("csv"); await page.waitForFunction(()=>window.__artifactDownloads.length===1);
+    const csvExport=await page.evaluate(()=>window.__artifactDownloads[0]);
+    check("CSV export only includes visible rows",csvExport.text.split("\r\n").length===2&&csvExport.text.includes('"fixture.md"')&&!csvExport.text.includes("fixture.csv"));
+    check("CSV export escapes quotes and includes UTF8 BOM",csvExport.text.includes('"UI regression, ""quoted"""')&&csvExport.bom.join(",")==="239,187,191");
+    await exporter.selectOption("markdown"); await page.waitForFunction(()=>window.__artifactDownloads.length===2);
+    const mdExport=await page.evaluate(()=>window.__artifactDownloads[1]);
+    check("Markdown export only includes visible rows",mdExport.text.includes("[fixture.md](</ui-regression/fixture.md>)")&&!mdExport.text.includes("fixture.csv"));
+    await page.locator(".ac-format-filter").getByRole("button",{name:/^(全选|Select all)$/}).click();
+    await page.waitForFunction(()=>document.querySelectorAll(".ac-row").length===10);
+    check("select all restores all configured formats",await page.locator(".ac-row").count()===10);
     await open("csv"); await page.locator(".ac-previewbody td").first().waitFor({state:"visible"});
     check("CSV quoting multiline cells",(await page.locator(".ac-previewbody td").allTextContents()).join("|")==='hello, world|line one\nline two|quote "inside"|42');
     await close(); await open("tsv"); await page.locator(".ac-previewbody td").first().waitFor({state:"visible"});
@@ -147,7 +206,7 @@ export async function browserRegression(page) {
     check("missing preview explains restore",await toolbar().getByRole("button",{name:/^(用默认程序打开|Open with default app)$/}).isDisabled());
     check("unavailable previews never read text",textCalls===beforeBoundary);
     await close();
-    const base = records[0];
+    const base = {...records[0],versions:[]};
     records = Array.from({length:10000},(_,i)=>({...base,id:(i+100).toString(16).padStart(32,"0"),name:`performance-${String(i).padStart(5,"0")}.md`,path:`/ui-regression/performance-${i}.md`,relPath:`performance-${i}.md`}));
     const loadStart = Date.now();
     await page.getByRole("combobox",{name:/^(时间倒序|Newest first)$/}).selectOption("name");

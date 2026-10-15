@@ -98,6 +98,7 @@ window.__ModuleLoader__.load({
       loading: "Loading…",
       copied: "Copied",
       saved: "Saved",
+      unsaved: "Unsaved draft",
       done: "Completed",
       truncated: "Preview shows the first part of this file.",
       error: "Operation failed",
@@ -228,6 +229,7 @@ window.__ModuleLoader__.load({
       loading: "正在加载…",
       copied: "已复制",
       saved: "已保存",
+      unsaved: "未保存的草稿",
       done: "已完成",
       truncated: "预览仅显示文件的前半部分。",
       error: "操作失败",
@@ -322,6 +324,8 @@ window.__ModuleLoader__.load({
 .ac-format-option{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border:1px solid var(--dsw-alias-border-l1);border-radius:6px;cursor:pointer;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary)}
 .ac-format-option[data-selected=true]{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 30%,var(--dsw-alias-border-l1));background:color-mix(in srgb,var(--dsw-alias-brand-primary) 7%,var(--dsw-alias-bg-layer-1));color:var(--dsw-alias-label-primary)}
 .ac-format-option input{width:12px;height:12px;margin:0;accent-color:var(--dsw-alias-brand-primary)}.ac-format-option code{font-size:11px;border:0;padding:0;background:none;color:inherit}
+.ac-root{position:relative}.ac-head{flex-shrink:0}.ac-body{flex:1 1 0;overflow:hidden}.ac-nav{height:100%;min-height:0;max-height:100%;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}.ac-nav:focus-visible{outline-offset:-3px}
+.ac-toast{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:flex-start;gap:10px;max-width:min(560px,calc(100% - 32px));padding:12px 14px;border:1px solid var(--dsw-alias-border-l2);border-radius:9px;background:var(--dsw-alias-bg-overlay);box-shadow:0 6px 24px #0002;font-size:12px;line-height:1.6}.ac-toast>span{overflow-wrap:anywhere;white-space:pre-wrap}.ac-toast>svg{flex-shrink:0;margin-top:2px;color:var(--dsw-alias-state-success-primary)}.ac-toast[data-tone=error]>svg{color:var(--dsw-alias-state-error-primary)}.ac-root .ac-toast>button{flex-shrink:0;margin-left:8px;border:0;padding:2px 4px;background:none;color:var(--dsw-alias-label-secondary)}.ac-draft-hint{float:right;font-size:10px;color:var(--dsw-alias-state-warn-primary)}
 
 `;
     function Icon({ kind = "folder", size = 18 }) {
@@ -337,6 +341,7 @@ window.__ModuleLoader__.load({
         expand: "M8 3H3v5 M16 3h5v5 M21 16v5h-5 M3 16v5h5",
         split: "M3 4h18v16H3z M12 4v16",
         more: "M5 11h.01v2H5z M12 11h.01v2H12z M19 11h.01v2H19z",
+        check: "m5 12 4 4 10-10",
         close: "m6 6 12 12 M6 18 18 6",
         tag: "M3 3h8l10 10-8 8L3 11z M7 7h.01",
         trash: "M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7",
@@ -355,6 +360,21 @@ window.__ModuleLoader__.load({
         },
         h("path", { d: paths[kind] ?? paths.file }),
       );
+    }
+    function Toast({ notice, onClose, t }) {
+      const [paused, setPaused] = useState(false);
+      useEffect(() => {
+        if (paused) return;
+        const timer = setTimeout(onClose, notice.tone === "success" ? 3000 : 8000);
+        return () => clearTimeout(timer);
+      }, [notice, paused]);
+      return h("div", { className: "ac-toast", "data-tone": notice.tone,
+        role: notice.tone === "error" ? "alert" : "status", "aria-atomic": true,
+        onMouseEnter: () => setPaused(true), onMouseLeave: () => setPaused(false),
+        onFocus: () => setPaused(true), onBlur: () => setPaused(false) },
+        h(Icon, { kind: notice.tone === "success" ? "check" : "info", size: 16 }),
+        h("span", null, notice.message),
+        h("button", { "aria-label": t("close"), onClick: onClose }, h(Icon, { kind: "close", size: 14 })));
     }
     async function api(action, data, signal) {
       const res = await fetch(`/artifact-center/api/${action}`, {
@@ -839,7 +859,7 @@ window.__ModuleLoader__.load({
             h("h4", null, t("fileTags")),
             h("div", { className: "ac-info-tags" }, ...(r.tags ?? []).map(tag => h("span", { key: tag, className: "ac-tag-chip" }, tag)),
               h("button", { className: "ac-tag-edit", onClick: editTags }, "+ ", t(r.tags?.length ? "editTags" : "addTag"))),
-            h("label", { className: "ac-note-label" }, t("note"), h("textarea", { value: note, onChange: e => setNote(e.target.value) })),
+            h("label", { className: "ac-note-label" }, t("note"), note !== (r.note ?? "") && h("span", { className: "ac-draft-hint" }, t("unsaved")), h("textarea", { value: note, onChange: e => setNote(e.target.value) })),
             h("button", { disabled: busy || note === (r.note ?? ""), onClick: () => act("patch", { id: r.id, patch: { note } }) }, t("save")),
             h("details", { className: "ac-history", open: true }, h("summary", null, t("versions")),
               h("p", { className: "ac-muted" }, t("versionsHint")),
@@ -871,7 +891,7 @@ window.__ModuleLoader__.load({
           [filter, setFilter] = useState({}),
           [sort, setSort] = useState("time"),
           [loading, setLoading] = useState(true),
-          [notice, setNotice] = useState(""),
+          [notice, setNotice] = useState(null),
           [selected, setSelected] = useState(new Set()),
           [preview, setPreview] = useState(null),
           [previewWide, setPreviewWide] = useState(true),
@@ -884,8 +904,10 @@ window.__ModuleLoader__.load({
           [apps, setApps] = useState(null),
           [note, setNote] = useState(""),
           [revision, setRevision] = useState(0);
-        const listRef = useRef(),
+        const listRef = useRef(), noteDrafts = useRef(new Map()),
           lastCount = useRef(-1);
+        const notify = (message, tone = "error") => setNotice(old =>
+          tone === "error" && old?.message === message && old?.tone === tone ? old : { message, tone });
         const rows = useMemo(() => {
           const configured = status.config?.readableExtensions;
           if (!configured) return allRows;
@@ -910,7 +932,7 @@ window.__ModuleLoader__.load({
                 }
               })
               .catch((e) => {
-                if (e.name !== "AbortError") setNotice(e.message);
+                if (e.name !== "AbortError") notify(e.message);
               });
           update();
           const timer = setInterval(update, 3000);
@@ -940,7 +962,7 @@ window.__ModuleLoader__.load({
               })
               .catch((e) => {
                 if (e.name !== "AbortError") {
-                  setNotice(e.message);
+                  notify(e.message);
                   setLoading(false);
                 }
               });
@@ -965,7 +987,9 @@ window.__ModuleLoader__.load({
           ? (rows.find((r) => r.id === preview.id) ?? preview)
           : null;
         useEffect(() => {
-          setNote(current?.note ?? "");
+          const id = current?.id, saved = current?.note ?? "";
+          if (noteDrafts.current.get(id) === saved) noteDrafts.current.delete(id);
+          setNote(noteDrafts.current.has(id) ? noteDrafts.current.get(id) : saved);
           setApps(null);
         }, [current?.id, current?.note]);
         const refresh = () => setRevision((v) => v + 1);
@@ -973,11 +997,11 @@ window.__ModuleLoader__.load({
           setBusy(true);
           try {
             const value = await api(action, data);
-            setNotice(t("done"));
+            notify(t("done"), "success");
             refresh();
             return value;
           } catch (e) {
-            setNotice(e.message);
+            notify(e.message);
             return null;
           } finally {
             setBusy(false);
@@ -986,9 +1010,9 @@ window.__ModuleLoader__.load({
         const copy = async (text) => {
           try {
             await navigator.clipboard.writeText(text);
-            setNotice(t("copied"));
+            notify(t("copied"), "success");
           } catch (e) {
-            setNotice(e.message);
+            notify(e.message);
           }
         };
         const choose = (f) => {
@@ -1031,7 +1055,7 @@ window.__ModuleLoader__.load({
               throw new Error("Conversation navigation unavailable");
             workspace.openSession(id);
           } catch (e) {
-            setNotice(e.message);
+            notify(e.message);
           }
         };
         const exportList = (format) => {
@@ -1101,7 +1125,8 @@ window.__ModuleLoader__.load({
                   results.push(...batch.map((id) => ({ id, ok: false, error: e.message })));
                 }
               }
-              setNotice(results.filter((r) => !r.ok).map((r) => r.error).join("\n") || t("trashHint"));
+              const failures = results.filter((r) => !r.ok).map((r) => r.error).join("\n");
+              notify(failures || t("trashHint"), failures ? "error" : "success");
               setSelected(new Set(results.filter((r) => !r.ok).map((r) => r.id)));
               refresh();
             } finally {
@@ -1207,24 +1232,14 @@ window.__ModuleLoader__.load({
                 },
               }),
             ),
-          notice &&
-            h(
-              "div",
-              { className: "ac-notice", role: "status" },
-              h("span", null, notice),
-              h(
-                "button",
-                { "aria-label": t("close"), onClick: () => setNotice("") },
-                "×",
-              ),
-            ),
+          notice && h(Toast, { notice, t, onClose: () => setNotice(null) }),
           h(
             "div",
             { className: "ac-body" },
             !collapsed && !(current && previewWide) &&
               h(
                 "nav",
-                { className: "ac-nav", "aria-label": t("panel") },
+                { className: "ac-nav", "aria-label": t("panel"), tabIndex: 0 },
                 nav(t("all"), {}, status.count, "folder"),
                 nav(t("starred"), { starred: true }, undefined, "star"),
                 h(
@@ -1560,11 +1575,11 @@ window.__ModuleLoader__.load({
             current && h(PreviewPane, {
               record: current, config: status.config, t, busy, copy, openSession, formatTime,
               wide: previewWide, setWide: setPreviewWide, info: previewInfo, setInfo: setPreviewInfo,
-              note, setNote, apps,
+              note, setNote: value => { noteDrafts.current.set(current.id, value); setNote(value); }, apps,
               onClose: () => setPreview(null), editTags: () => setTagTarget(current),
               loadApps: async () => {
                 try { setApps(await api(`applications?id=${encodeURIComponent(current.id)}`)); }
-                catch (e) { setNotice(e.message); }
+                catch (e) { notify(e.message); }
               },
               act: (action, data) => action === "confirm-trash"
                 ? setModal({ kind: "trash", records: [data.record] }) : act(action, data),
@@ -1575,7 +1590,7 @@ window.__ModuleLoader__.load({
             onCancel: () => setTagTarget(null),
             onSave: async (tags) => {
               await api("patch", { id: tagTarget.id, patch: { tags } });
-              setTagTarget(null); setNotice(t("saved")); refresh();
+              setTagTarget(null); notify(t("saved"), "success"); refresh();
             },
           }),
           modal &&
