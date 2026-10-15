@@ -318,15 +318,15 @@ test("native event envelope paths and sources are extracted without trusting mal
     },
   ];
   assert.deepEqual(
-    extractArtifacts(events, "/tmp").map((r) => [
+    extractArtifacts(events, path.resolve(".cache/extraction")).map((r) => [
       r.path,
       r.source,
       r.turn,
       r.time,
     ]),
     [
-      ["/tmp/out.md", "write", 1, 100],
-      ["/tmp/out.md", "present", 1, 101],
+      [path.resolve(".cache/extraction/out.md"), "write", 1, 100],
+      [path.resolve(".cache/extraction/out.md"), "present", 1, 101],
     ],
   );
 });
